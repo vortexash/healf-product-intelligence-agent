@@ -1,12 +1,14 @@
-# Render blueprint for the FastAPI backend.
+# Render blueprint for the FastAPI backend (monorepo: backend lives in ./backend).
 # In the Render dashboard: New + > Blueprint > point at this repo.
-# Then set the secret env var OPENAI_API_KEY (and update FRONTEND_ORIGIN to your Vercel URL).
+# Then set the secret env var OPENAI_API_KEY (and, optionally, FRONTEND_ORIGIN = your Vercel URL).
 services:
   - type: web
     name: healf-backend
     runtime: docker
-    rootDir: backend
-    dockerfilePath: ./Dockerfile
+    # Paths are relative to the REPO ROOT. Point both the Dockerfile and its
+    # build context at ./backend so the COPY steps inside the Dockerfile resolve.
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     healthCheckPath: /health
     plan: free
     envVars:
