@@ -42,33 +42,48 @@ def _ingredient_haystack(p: ProductData) -> str:
     return normalize(" ".join(parts))
 
 
-def _list_ingredients(p: ProductData) -> ChatAnswer:
-    """List the product's ingredients (grouped by flavour/variant when present)."""
-    if len(p.ingredient_groups) > 1:
-        lines = [f"**{name}:** {', '.join(items)}" for name, items in p.ingredient_groups.items()]
-        text = "Here are the ingredients listed on the live page:\n\n" + "\n\n".join(lines)
+def _list_ingredients(p: ProductData, label: str, wants_nutrition: bool) -> ChatAnswer:
+    """List the ingredients / nutritional-information section (grouped by flavour when present)."""
+    name = p.title or "this product"
+    groups = p.ingredient_groups
+    if len(groups) > 1:
+        item_count = sum(len(v) for v in groups.values())
+        lines = [f"**{g}:** {', '.join(items)}" for g, items in groups.items()]
+        text = (
+            f"Here's the {label} for **{name}**, broken down by its {len(groups)} flavour blends "
+            f"({item_count} listed items in total):\n\n" + "\n\n".join(lines)
+        )
     else:
-        text = f"Here are the ingredients listed on the live page:\n\n{p.ingredients_raw}"
-    return ChatAnswer(
-        text=text,
-        intent="ingredient_lookup",
-        confidence="high",
-        limitations=["Formulations can change; always check the physical label."],
-    )
+        raw = p.ingredients_raw or ""
+        item_count = len([x for x in re.split(r",|;", raw) if x.strip()])
+        text = (
+            f"Here's the {label} section from the live page for **{name}** "
+            f"({item_count} listed items):\n\n{raw}"
+        )
+    limits = ["Formulations can change; always check the physical label."]
+    if wants_nutrition:
+        limits.append(
+            "Healf lists ingredients and nutritional information in one section on this page; "
+            "per-serving nutrient amounts aren't broken out unless they appear above."
+        )
+    return ChatAnswer(text=text, intent="ingredient_lookup", confidence="high", limitations=limits)
 
 
-def answer_ingredient(p: ProductData, term: str | None) -> ChatAnswer:
+def answer_ingredient(p: ProductData, term: str | None, message: str = "") -> ChatAnswer:
     has_ingredients = bool(p.ingredients_raw or p.ingredient_groups)
+    wants_nutrition = bool(re.search(r"nutrition", message, re.I))
+    label = "ingredients and nutritional information" if wants_nutrition else "ingredients"
+    name = p.title or "this product"
 
-    # No specific ingredient asked ("what are the ingredients?") -> list them all.
+    # No specific ingredient asked ("what are the ingredients / nutritional info?") -> list it all.
     if not term:
         if has_ingredients:
-            return _list_ingredients(p)
+            return _list_ingredients(p, label, wants_nutrition)
         return ChatAnswer(
-            text="I could not find an ingredients section on the live product page.",
+            text=f"I could not find an {label} section on the live product page for **{name}**.",
             intent="ingredient_lookup",
             confidence="low",
-            limitations=["No ingredients section was extracted from the public page."],
+            limitations=["No ingredients or nutritional-information section was extracted from the public page."],
         )
 
     if not has_ingredients:
