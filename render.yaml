@@ -1,15 +1,19 @@
 # Render blueprint for the FastAPI backend (monorepo: backend lives in ./backend).
-# In the Render dashboard: New + > Blueprint > point at this repo.
-# Then set the secret env var OPENAI_API_KEY (and, optionally, FRONTEND_ORIGIN = your Vercel URL).
+# Uses Render's NATIVE PYTHON runtime (not Docker) — simplest + most reliable for a
+# monorepo: rootDir points at ./backend so requirements.txt and app/ resolve directly.
+# In the dashboard: New + > Blueprint > this repo, then set the secret OPENAI_API_KEY.
 services:
   - type: web
     name: healf-backend
-    runtime: docker
-    # Build context defaults to the repo root; the Dockerfile COPYs backend/ paths.
-    dockerfilePath: ./backend/Dockerfile
-    healthCheckPath: /health
+    runtime: python
+    rootDir: backend
     plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
       - key: LLM_PROVIDER
         value: openai
       - key: OPENAI_MODEL
