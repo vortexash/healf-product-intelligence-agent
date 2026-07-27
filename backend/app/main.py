@@ -42,6 +42,18 @@ async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(status_code=exc.status_code, content={"code": exc.code, "message": exc.message})
 
 
+@app.get("/")
+async def root() -> dict:
+    # The backend is an API; there's no UI here (that's the frontend/Vercel app).
+    return {
+        "service": "Healf Product Intelligence Agent API",
+        "status": "ok",
+        "llm_configured": llm_client.is_configured(),
+        "endpoints": ["/health", "/api/products/fetch", "/api/chat", "/api/chat/stream"],
+        "note": "This is the backend API. The chat UI is the frontend app.",
+    }
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok", "llm_configured": llm_client.is_configured()}

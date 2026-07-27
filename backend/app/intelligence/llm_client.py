@@ -35,7 +35,7 @@ async def complete_json(system: str, user: str, *, max_tokens: int = 1500) -> di
     if not s.llm_configured:
         raise AppError("LLM_NOT_CONFIGURED", "The evaluation model is not configured.", 503)
     try:
-        if s.llm_provider == "anthropic":
+        if s.resolved_provider == "anthropic":
             text = await _anthropic(system, user, max_tokens)
         else:
             text = await _openai(system, user, max_tokens)

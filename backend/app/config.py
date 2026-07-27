@@ -31,11 +31,32 @@ class Settings(BaseModel):
     log_level: str = "INFO"
 
     @property
+    def resolved_provider(self) -> str:
+        """The provider actually usable at runtime.
+
+        Honors LLM_PROVIDER (case-insensitive) when that provider's key is set;
+        otherwise infers from whichever key IS present. This means setting just
+        OPENAI_API_KEY (or just ANTHROPIC_API_KEY) is enough — no need to also
+        remember LLM_PROVIDER.
+        """
+        p = (self.llm_provider or "").strip().lower()
+        if p == "openai" and self.openai_api_key:
+            return "openai"
+        if p == "anthropic" and self.anthropic_api_key:
+            return "anthropic"
+        if self.openai_api_key:
+            return "openai"
+        if self.anthropic_api_key:
+            return "anthropic"
+        return p or "anthropic"
+
+    @property
     def llm_configured(self) -> bool:
-        if self.llm_provider == "anthropic":
-            return bool(self.anthropic_api_key)
-        if self.llm_provider == "openai":
+        rp = self.resolved_provider
+        if rp == "openai":
             return bool(self.openai_api_key)
+        if rp == "anthropic":
+            return bool(self.anthropic_api_key)
         return False
 
 
