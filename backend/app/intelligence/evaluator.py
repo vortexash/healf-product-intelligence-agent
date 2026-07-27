@@ -17,7 +17,7 @@ async def evaluate(p: ProductData, question: str) -> ProductEvaluation:
 
     base_limitations = [
         "This is a heuristic evaluation, not an exact score.",
-        "Image content was not visually inspected (no vision in the MVP).",
+        "This score judges image count and alt text, not the visual content - ask 'what do the images show?' for a visual analysis.",
     ]
     if benchmark is None:
         base_limitations.append(
@@ -51,7 +51,7 @@ async def evaluate(p: ProductData, question: str) -> ProductEvaluation:
         default=str,
     )
     try:
-        data = await llm_client.complete_json(prompt.SYSTEM + "\n" + prompt.SCHEMA_HINT, user, max_tokens=2000)
+        data = await llm_client.complete_json(prompt.SYSTEM + "\n" + prompt.SCHEMA_HINT, user, max_tokens=2200)
     except Exception:  # noqa: BLE001 - degrade to rules-only on any LLM failure
         recs = _fallback_recommendations(categories)
         return ProductEvaluation(
