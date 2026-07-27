@@ -53,12 +53,11 @@ Does this have Vitamin D?    →  then: "What can I improve on this page?"
 | README + architecture + limitations + roadmap | This file + [`docs/`](docs/) |
 | Tests (mocked, not live-only) | `backend/tests/`, `frontend/test/` |
 
-## 3. Screenshots
+## 3. See it in action
 
-Live UI screenshots go in [`examples/screenshots/`](examples/screenshots/) — see the capture
-guide there. The **real text** of every demo response is in
-[`examples/example_outputs.md`](examples/example_outputs.md) so outputs are verifiable without
-running the app.
+Try the **[live demo](https://healf-product-intelligence-agent.vercel.app)**, or read the **real
+text** of every demo response in [`examples/example_outputs.md`](examples/example_outputs.md) —
+outputs are verifiable without running the app.
 
 ## 4. Architecture
 
@@ -275,7 +274,7 @@ detail in [`docs/roadmap.md`](docs/roadmap.md).
 ├── README.md
 ├── docker-compose.yml
 ├── docs/                       # architecture.md · roadmap.md
-├── examples/                   # example_outputs.md (live) · screenshots/
+├── examples/                   # example_outputs.md (real captured responses)
 ├── backend/
 │   ├── app/
 │   │   ├── main.py             # FastAPI: /health /api/products/fetch /api/chat /api/chat/stream
