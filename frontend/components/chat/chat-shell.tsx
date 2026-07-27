@@ -8,7 +8,14 @@ import { Message } from "./message";
 import { ProductContextChip } from "@/components/product/product-context-chip";
 import { EvidenceDrawer } from "@/components/intelligence/evidence-drawer";
 import { streamChat, getHealth } from "@/lib/api";
-import { loadHistory, upsertHistory, removeHistory, type HistoryEntry } from "@/lib/local-history";
+import {
+  loadHistory,
+  upsertHistory,
+  removeHistory,
+  saveThread,
+  loadThread,
+  type HistoryEntry,
+} from "@/lib/local-history";
 import type { ProductData, SourceEvidence } from "@/lib/types";
 import type { ThreadMessage } from "./model";
 
@@ -34,6 +41,9 @@ export function ChatShell() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  // URL of the reopened chat's product, sent with the next message so context is
+  // re-established even if the in-memory server session has expired.
+  const [pendingProductUrl, setPendingProductUrl] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<{ open: boolean; evidence: SourceEvidence[]; at?: string | null }>({
     open: false,
     evidence: [],
@@ -53,6 +63,23 @@ export function ChatShell() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
+
+  // Persist the full thread once a turn finishes, so it can be reopened later.
+  useEffect(() => {
+    if (sessionId && messages.length > 0 && !busy) {
+      saveThread(sessionId, messages, activeProduct);
+    }
+  }, [sessionId, messages, busy, activeProduct]);
+
+  const openChat = (e: HistoryEntry) => {
+    const t = loadThread(e.sessionId);
+    setMessages(t?.messages ?? []);
+    setActiveProduct(t?.product ?? null);
+    setSessionId(e.sessionId);
+    setPendingProductUrl(t?.product?.source_url ?? e.productUrl ?? null);
+    setInput("");
+    setSidebarOpen(false);
+  };
 
   const toggleCollapse = () =>
     setCollapsed((c) => {
@@ -78,6 +105,7 @@ export function ChatShell() {
     setSessionId(null);
     setMessages([]);
     setActiveProduct(null);
+    setPendingProductUrl(null);
     setInput("");
     setSidebarOpen(false);
   };
@@ -88,6 +116,8 @@ export function ChatShell() {
       if (!text || busy) return;
       setInput("");
       setBusy(true);
+      const resumeUrl = pendingProductUrl;
+      setPendingProductUrl(null);
 
       const userMsg: ThreadMessage = { id: uid(), role: "user", text };
       const assistantMsg: ThreadMessage = { id: uid(), role: "assistant", text: "", streaming: true, status: [] };
@@ -99,7 +129,7 @@ export function ChatShell() {
       let streamedText = "";
 
       streamChat(
-        { session_id: sessionId ?? undefined, message: text },
+        { session_id: sessionId ?? undefined, message: text, product_url: resumeUrl ?? undefined },
         {
           onStatus: (s) => {
             statusLog!.push(s);
@@ -133,6 +163,7 @@ export function ChatShell() {
                 sessionId: r.session_id,
                 productTitle: prod?.title ?? null,
                 productThumb: primary?.url ?? null,
+                productUrl: prod?.source_url ?? null,
                 lastMessage: r.answer.text.replace(/[*#_`]/g, "").slice(0, 80),
                 updatedAt: Date.now(),
               }),
@@ -146,7 +177,7 @@ export function ChatShell() {
         },
       );
     },
-    [input, busy, sessionId, activeProduct, patchLast],
+    [input, busy, sessionId, activeProduct, pendingProductUrl, patchLast],
   );
 
   const empty = messages.length === 0;
@@ -157,8 +188,11 @@ export function ChatShell() {
         history={history}
         activeSession={sessionId}
         onNewChat={newChat}
-        onSelect={() => setSidebarOpen(false)}
-        onDelete={(id) => setHistory(removeHistory(id))}
+        onSelect={openChat}
+        onDelete={(id) => {
+          setHistory(removeHistory(id));
+          if (id === sessionId) newChat();
+        }}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         collapsed={collapsed}
