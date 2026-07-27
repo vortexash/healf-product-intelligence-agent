@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { AgentProgress } from "./agent-progress";
 import { PromptChips } from "./prompt-chips";
 import { ProductCard } from "@/components/product/product-card";
-import { IngredientCard } from "@/components/product/ingredient-card";
 import { ReviewSummaryCard } from "@/components/product/review-summary-card";
 import { Scorecard } from "@/components/intelligence/scorecard";
 import { Recommendations } from "@/components/intelligence/recommendations";
@@ -92,7 +91,6 @@ export function Message({
           )}
 
           {/* Specialized response blocks */}
-          {!m.streaming && intent === "ingredient_lookup" && m.product && <IngredientCard product={m.product} />}
           {!m.streaming && intent === "review_lookup" && m.product && <ReviewSummaryCard reviews={m.product.reviews} />}
           {!m.streaming && m.evaluation && (
             <>
