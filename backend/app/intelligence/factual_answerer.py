@@ -58,14 +58,17 @@ def answer_ingredient(p: ProductData, term: str | None) -> ChatAnswer:
     aliases = _aliases_for(term)
     haystack = _ingredient_haystack(p)
     matched = [a for a in aliases if re.search(r"\b" + re.escape(a) + r"\b", haystack)]
-    excerpt = (p.ingredients_raw or "")[:400]
+    full = p.ingredients_raw or ""
+    excerpt = full[:400].rstrip()
+    if len(full) > 400:
+        excerpt += "…"
     if matched:
         pretty = ", ".join(sorted(set(matched)))
         return ChatAnswer(
             text=(
                 f"**Yes - {term} is listed** in the ingredients.\n\n"
                 f"Matched terms: _{pretty}_.\n\n"
-                f"Ingredient excerpt: “{excerpt}…”"
+                f"Ingredient excerpt: “{excerpt}”"
             ),
             intent="ingredient_lookup",
             confidence="high",
@@ -75,7 +78,7 @@ def answer_ingredient(p: ProductData, term: str | None) -> ChatAnswer:
         text=(
             f"**{term} is not listed** in the ingredients available on the live page.\n\n"
             f"(That means it was not found in the published list - not a guarantee the product "
-            f"is free from it.)\n\nIngredient excerpt: “{excerpt}…”"
+            f"is free from it.)\n\nIngredient excerpt: “{excerpt}”"
         ),
         intent="ingredient_lookup",
         confidence="high",

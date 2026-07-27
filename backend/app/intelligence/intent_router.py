@@ -42,7 +42,7 @@ _RULES: list[tuple[str, list[str]]] = [
     ("price_lookup", [r"\bprice\b", r"\bcost\b", r"how much", r"\bcheaper\b", r"\bexpensive\b", r"\bdiscount\b"]),
     ("availability_lookup", [r"in stock", r"\bavailable\b", r"availability", r"sold out", r"out of stock"]),
     ("review_lookup", [r"\breviews?\b", r"\bratings?\b", r"\bstars?\b", r"how many .*review"]),
-    ("ingredient_lookup", [r"\bingredient", r"\bcontain", r"does it have", r"vitamin", r"\bmagnesium\b", r"\bcaffeine\b", r"\ballergen", r"\bnutrition", r"is there .* in (it|this)"]),
+    ("ingredient_lookup", [r"\bingredient", r"\bcontain", r"\binclude", r"does it have", r"\bvitamin", r"\bmagnesium\b", r"\bcaffeine\b", r"\bsugar\b", r"\ballergen", r"\bnutrition", r"is there .* in (it|this)"]),
     ("page_evaluation", [r"\bimprove\b", r"what.?s (wrong|missing)", r"evaluate", r"assessment", r"how good", r"quality of (this|the) page", r"whats? missing", r"audit"]),
     ("product_summary", [r"\bsummar", r"\btell me about\b", r"what is this", r"overview", r"describe (this|the) product"]),
 ]
@@ -73,11 +73,29 @@ def classify(message: str) -> IntentResult:
 def _extract_target(intent: str, message: str) -> str | None:
     if intent != "ingredient_lookup":
         return None
-    # Pull the nutrient/ingredient after 'contain/have/is there' or a 'vitamin X'.
+
+    # 1. Most reliable: any known ingredient (or alias) mentioned anywhere in the
+    #    message, regardless of how the question is phrased.
+    from .factual_answerer import INGREDIENT_ALIASES
+
+    norm_msg = normalize(message)
+    for key, aliases in INGREDIENT_ALIASES.items():
+        for term in [key, *aliases]:
+            if re.search(r"\b" + re.escape(term) + r"\b", norm_msg):
+                return key
+
+    # 2. "vitamin X".
     m = re.search(r"vitamin\s+[a-z0-9]+", message, re.I)
     if m:
         return m.group(0).strip()
-    m = re.search(r"(?:contain|have|has|with|any|is there)\s+(?:any\s+)?([a-z][a-z0-9 \-]{2,30}?)(?:\s+in\b|\?|$)", message, re.I)
+
+    # 3. The word after a lookup verb, for ingredients not in the alias map.
+    m = re.search(
+        r"(?:contains?|have|has|includes?|with|any|is there(?:\s+any)?|got|does it have)\s+"
+        r"(?:any\s+)?([a-z][a-z0-9 \-]{1,30}?)(?:\s+in\b|\s*\??$|\s*\?)",
+        message,
+        re.I,
+    )
     if m:
         return m.group(1).strip()
     return None
