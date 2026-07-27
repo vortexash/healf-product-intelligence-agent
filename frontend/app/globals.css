@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-cream text-ink antialiased;
+  font-feature-settings: "ss01", "cv01";
+  letter-spacing: -0.006em; /* subtle tightening, Healf-style */
+}
+
+/* Editorial display type: tight negative tracking on headings (Healf) */
+h1,
+h2,
+h3 {
+  @apply tracking-tight2;
+}
+
+/* Signature Healf gradient as text or fill */
+.text-healf-gradient {
+  @apply bg-healf-gradient-h bg-clip-text text-transparent;
+  background-size: 200% auto;
+}
+.brandmark {
+  @apply bg-healf-gradient;
+}
+
+/* Focus visibility (accessibility) */
+*:focus-visible {
+  @apply outline-none ring-2 ring-healf-ring ring-offset-2 ring-offset-cream rounded-md;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Markdown prose */
+.prose-chat p {
+  @apply mb-2 leading-relaxed;
+}
+.prose-chat ul {
+  @apply list-disc pl-5 mb-2 space-y-1;
+}
+.prose-chat ol {
+  @apply list-decimal pl-5 mb-2 space-y-1;
+}
+.prose-chat strong {
+  @apply font-semibold text-ink;
+}
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3 {
+  @apply font-semibold mb-1 mt-2;
+}
+.prose-chat a {
+  @apply text-healf underline underline-offset-2;
+}
+.prose-chat code {
+  @apply bg-healf-soft px-1 py-0.5 rounded text-sm;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply bg-line rounded-full;
+}

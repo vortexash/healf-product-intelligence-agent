@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+backend/.env
+
+# Node / Next
+node_modules/
+.next/
+frontend/.env
+frontend/.env.local
+npm-debug.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# build artifacts
+frontend/*.tsbuildinfo
+
+# Personal interview-prep notes — do NOT commit
+docs/DEMO.md
+docs/CODEBASE_GUIDE.md
+
+# Claude Code / assistant files — do NOT commit
+.claude/
+CLAUDE.md
+**/CLAUDE.md
+.claude*
+
+# Assignment brief & PRD — do NOT commit
+AI Automation - Assignment.pdf
+Healf_Product_Intelligence_Agent_PRD.md
+PRD.md

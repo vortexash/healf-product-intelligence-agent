@@ -1,0 +1,27 @@
+{
+  "sample_size": 8,
+  "generated_at": "2026-07-27T12:09:45.597492+00:00",
+  "median_description_words": 469,
+  "median_image_count": 4,
+  "alt_text_coverage": 0.125,
+  "ingredient_section_rate": 0.375,
+  "suggested_use_rate": 0.875,
+  "review_presence_rate": 0.125,
+  "subscription_rate": 0.375,
+  "common_sections": [
+    "Product Description",
+    "Key Benefits",
+    "Suggested Use",
+    "Ingredients"
+  ],
+  "sampled_handles": [
+    "lmnt-recharge-electrolytes-variety-pack",
+    "oura-ring-cooper-stealth",
+    "momentous-longevity",
+    "kala-red-light-therapy-pro-panel",
+    "ancestral-supplements-ancestral-minerals",
+    "sans-sans-water-purifier-black",
+    "our-place-essentials-cookware-set-bluesalt",
+    "kala-red-light-therapy-restore-wrap"
+  ]
+}
