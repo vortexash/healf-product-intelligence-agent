@@ -1,301 +1,170 @@
 # Healf Product Intelligence Agent
 
-A chat-first, live product-intelligence agent for [healf.com](https://healf.com). Paste a
-public Healf product URL, ask a natural-language question, and get an **evidence-grounded**
-answer drawn from the live product page — then keep asking follow-ups without re-pasting the URL.
+A chat agent that answers questions about Healf product pages using live data from the site. You
+paste a product URL, ask something in plain English ("does this have vitamin D?", "what's weak about
+this page?", "rewrite the description"), and it fetches the page, pulls out what it needs, and
+answers you — with the source for each fact, and follow-ups don't need the URL again.
 
-It answers **factual** questions deterministically (reviews, ingredients, price, subscription,
-availability, images), **evaluates** page quality with a weighted heuristic scorecard + an LLM,
-and **generates** improved content (rewrites, FAQs, SEO) — always showing its evidence and limits.
+Live demo: https://healf-product-intelligence-agent.vercel.app
 
-> **Not a form dashboard — a specialized ChatGPT for Healf product pages.**
-
-## 🔴 Live demo
-
-**Try it: https://healf-product-intelligence-agent.vercel.app**
-
-Paste a Healf product URL and ask, e.g.:
+Try:
 
 ```
 https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack
-Does this have Vitamin D?    →  then: "What can I improve on this page?"
+Does this have Vitamin D?
 ```
 
-- Frontend (Vercel): https://healf-product-intelligence-agent.vercel.app
-- Backend API (Render): https://healf-product-intelligence-agent.onrender.com — `/health` returns status
-- ⏳ The backend is on a free tier that sleeps after ~15 min idle, so the **first** message may take
-  ~30–60s to wake it; everything after is fast.
+(The backend is on Render's free tier and sleeps when idle, so the first request after a while takes
+30-60s to wake up. It's quick after that.)
 
----
+This was a take-home with a ~5-hour guideline, so it's built as a solid foundation rather than a
+finished product. The parts I found most interesting are how it gets structured data out of Healf,
+and keeping facts deterministic while using the LLM only for the open-ended stuff.
 
-## 1. What it does (assignment capabilities)
-
-| Capability | Implementation |
-|---|---|
-| **Navigate** | Strict Healf URL validation + SSRF-safe fetch (`backend/app/navigation/`) |
-| **Ingest** | Layered parsers → normalized `ProductData` with per-field evidence (`backend/app/ingestion/`) |
-| **Evaluate** | Deterministic signals + weighted scorecard, refined by an LLM (`backend/app/intelligence/evaluation_rules.py`, `evaluator.py`) |
-| **Act** | Factual answers, recommendations, and content generation (`factual_answerer.py`, `content_generator.py`, `response_composer.py`) |
-
-## 2. Assignment requirement mapping
-
-| Requirement | Where |
-|---|---|
-| Natural-language chat agent | `frontend/components/chat/` |
-| URL in first message, auto-extracted | `url_parser.extract_url` + `chat_service.pipeline` |
-| Live Healf data only (no static dataset) | `healf_client.fetch` + `ingestion/` |
-| ≥ two of text/reviews/images | All three: text, review summary, images |
-| Navigate / Ingest / Evaluate / Act | See table above |
-| ≥ one LLM capability | Evaluation narrative + content generation |
-| Evidence shown | Evidence drawer + `SourceEvidence` on every field |
-| Follow-ups without URL | In-memory session product context |
-| Example outputs | [`examples/example_outputs.md`](examples/example_outputs.md) (captured live) |
-| README + architecture + limitations + roadmap | This file + [`docs/`](docs/) |
-| Tests (mocked, not live-only) | `backend/tests/`, `frontend/test/` |
-
-## 3. See it in action
-
-Try the **[live demo](https://healf-product-intelligence-agent.vercel.app)**, or read the **real
-text** of every demo response in [`examples/example_outputs.md`](examples/example_outputs.md) —
-outputs are verifiable without running the app.
-
-## 4. Architecture
-
-See [`docs/architecture.md`](docs/architecture.md) for the full diagram and the reasoning
-behind Healf's bespoke ingestion. In short:
+## How it works
 
 ```
-User (Next.js chat) → FastAPI → URL validate + SSRF → live fetch (httpx)
-   → parsers [embedded flight JSON · JSON-LD · HTML accordions · images · reviews · Shopify probe]
-   → merger (precedence + evidence) → ProductData
-   → intent router → { deterministic answerer | rules + LLM } → composer → SSE stream
+chat UI (Next.js) -> FastAPI -> validate URL + SSRF check -> fetch the live page
+  -> parsers -> merge into one ProductData (with evidence) -> route the question
+  -> deterministic answer, or rules + LLM -> stream back over SSE
 ```
 
-**Key discovery:** Healf is a **headless Next.js** storefront, so the classic Shopify
-`/products/{handle}.js|.json` endpoints return HTML, not JSON. The rich product data lives in
-React Server Component **flight payloads** (`self.__next_f.push(...)`); reviews/rating come from
-a JSON-LD `Product` block; and description/ingredients/suggested-use live in Radix **accordions**.
-The parsers target all three; the `.js`/`.json` probe is kept for real Shopify themes and
-degrades to nothing on Healf.
+### Getting data out of Healf
 
-## 5. Technology choices
+This is the part that took the most digging. Healf runs on Shopify, but it's a headless Next.js
+frontend rather than a classic Liquid theme, so the obvious move — hitting `/products/{handle}.json`
+— doesn't work. Those URLs just return the app's HTML. The real product data is spread across three
+places, and I parse all of them:
 
-- **Backend:** FastAPI · httpx · BeautifulSoup4/lxml · Pydantic v2 · tenacity · Anthropic/OpenAI SDK · pytest/respx.
-- **Frontend:** Next.js (App Router) · TypeScript · Tailwind · React Markdown · Lucide · Zod · fetch streaming (SSE).
-- **State:** in-memory sessions (60 min) + product cache (10 min). No DB / vector store / auth (MVP scope).
-- **shadcn/ui note:** rather than run the shadcn CLI, the ~5 primitives actually used (button, card,
-  badge, textarea, drawer) are hand-written in `frontend/components/ui/` — same clean look, no CLI/network dependency.
+- The Shopify product object is embedded in the page's React Server Component payloads
+  (`self.__next_f.push(...)`). That's where variants, pricing, subscription plans, images and SEO
+  come from.
+- A JSON-LD `Product` block carries the review count and rating.
+- The description, ingredients and usage instructions live inside Radix accordions in the HTML.
 
-## 6. Setup
+Each parser returns a fragment plus evidence — which source it came from, an excerpt, a confidence.
+A merger combines them using a precedence order and records any conflicts, so every field on the
+final product can be traced back to where it came from (that's what the evidence drawer in the UI
+shows). The old `.json` probe is still in there; it just no-ops on Healf and would work on a normal
+Shopify store.
 
-Prerequisites: **Python 3.12+**, **Node 20+**. (Docker optional.)
+### Deterministic vs LLM
+
+Facts don't go through the model. Ingredient lookups, reviews, price, availability, image counts —
+those are answered straight from the parsed data. The LLM only handles open-ended work: page
+evaluation, prioritising fixes, summaries, and writing (rewrites, FAQ, SEO). And it never sees raw
+HTML, only a trimmed dict of extracted facts, so it can't invent a price or an ingredient.
+
+Two grounding details I cared about:
+
+- Ingredient answers distinguish present / not listed / unknown. If vitamin D isn't in the list it
+  says "not listed on the live page", not "this product doesn't contain it" — those aren't the same
+  claim, and the page might just be incomplete.
+- The page score is a weighted heuristic, and it's labelled as one. The signals are computed in
+  code; the LLM writes the narrative and ranks the recommendations on top of them.
+
+### Site context
+
+Evaluations are more useful when they know what "good" looks like across Healf. `scripts/build_benchmark.py`
+samples a handful of live products into `backend/data/benchmark.json` — median description length,
+image count, alt-text coverage, how often ingredients/reviews/subscriptions show up. The evaluator
+passes that to the LLM, so a recommendation can say "add another image to match the ~4 that
+comparable pages have" instead of a generic "add more images". If the file isn't there, evaluation
+stays product-specific and says so rather than pretending to compare against the whole catalogue.
+
+## Running it
+
+Needs Python 3.12+ and Node 20+.
+
+Backend:
 
 ```bash
-git clone <repo> && cd healf-product-intelligence
-
-# Backend
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env        # optionally add an LLM key (see §7)
+cp .env.example .env          # add an OpenAI or Anthropic key for evaluation/rewrites
+uvicorn app.main:app --reload --port 8000
+```
 
-# Frontend (new terminal)
+Frontend (another terminal):
+
+```bash
 cd frontend
 npm install
-cp .env.example .env.local  # NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+cp .env.example .env.local    # NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+npm run dev
 ```
 
-## 7. Environment variables
+Then open http://localhost:3000. Or `docker compose up --build` to run both at once.
 
-**Backend (`backend/.env`):** factual answers work with **no key**. Set one provider to enable
-evaluation narrative + content generation.
+Factual questions work with no API key. Evaluation and content generation need one — set either
+`OPENAI_API_KEY` or `ANTHROPIC_API_KEY` and it picks the provider from whichever key is present.
 
-```env
-LLM_PROVIDER=anthropic          # or "openai"
-ANTHROPIC_API_KEY=              # required only for LLM features
-ANTHROPIC_MODEL=claude-opus-4-8
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o
-FRONTEND_ORIGIN=http://localhost:3000
-PRODUCT_CACHE_TTL_SECONDS=600
-SESSION_TTL_SECONDS=3600
-REQUEST_TIMEOUT_SECONDS=20
-HTTP_USER_AGENT=HealfProductIntelligenceMVP/1.0
-```
+## The API
 
-**Frontend (`frontend/.env.local`):**
-
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-```
-
-## 8. Run locally
+Four endpoints: `GET /health`, `POST /api/products/fetch`, `POST /api/chat`, and
+`POST /api/chat/stream` (server-sent events: `status` -> `product` -> `token` -> `complete`).
 
 ```bash
-# Terminal 1 — backend
-cd backend && uvicorn app.main:app --reload --port 8000
-
-# Terminal 2 — frontend
-cd frontend && npm run dev
-```
-
-Open **http://localhost:3000**, paste `https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack`
-and ask a question.
-
-## 9. Run with Docker
-
-```bash
-cp backend/.env.example backend/.env    # add a key for LLM features (optional)
-docker compose up --build
-# frontend http://localhost:3000 · backend http://localhost:8000
-```
-
-## 10. API examples
-
-```bash
-# Health
-curl http://localhost:8000/health
-# {"status":"ok","llm_configured":false}
-
-# Fetch a product (debug/tests)
-curl -X POST http://localhost:8000/api/products/fetch \
-  -H 'Content-Type: application/json' \
-  -d '{"url":"https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack"}'
-
-# Chat (non-streaming)
-curl -X POST http://localhost:8000/api/chat -H 'Content-Type: application/json' \
+curl -X POST localhost:8000/api/chat -H 'content-type: application/json' \
   -d '{"message":"https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack\nDoes it contain Vitamin D?"}'
-
-# Chat (SSE stream): events status → product → token → complete
-curl -N -X POST http://localhost:8000/api/chat/stream -H 'Content-Type: application/json' \
-  -d '{"session_id":"<from previous>","message":"What can I improve on this page?"}'
 ```
 
-## 11. Supported question types
-
-`review_lookup` · `ingredient_lookup` (alias-aware) · `price_lookup` · `subscription_lookup` ·
-`availability_lookup` · `image_evaluation` · `page_evaluation` · `seo_evaluation` ·
-`content_rewrite` · `faq_generation` · `product_summary` · `general_product_question`.
-
-## 12. Example outputs
-
-Real, unedited responses captured from the live backend:
-[`examples/example_outputs.md`](examples/example_outputs.md). Highlights (LMNT Recharge):
-
-- **Reviews:** "Yes — 516 reviews, 4.9/5" (aggregate only; individual text not ingested).
-- **Vitamin D:** *"Vitamin D is **not listed** in the ingredients available on the live page"* —
-  never "does not contain".
-- **Magnesium:** "**Yes — magnesium is listed**" (matched `magnesium malate`).
-- **Evaluation:** 89/100 heuristic; weakest = Image coverage (46, 0% alt text) → prioritized fix.
-
-## 13. Data extraction strategy
-
-Layered, most-reliable first, merged by precedence (see `docs/architecture.md`):
-
-1. **Shopify probe** `/products/{h}.js|.json` (locale-first) — graceful 404 on Healf.
-2. **Embedded flight JSON** — variants, price range, compare-at, selling plans (subscription %),
-   images (`src`/`altText`), SEO, availability. *(Primary source on Healf.)*
-3. **JSON-LD `Product`** — reviews (`aggregateRating` → count + rating), offers, brand.
-4. **HTML accordions** — description, "Why … is Healf", ingredients (split into flavour groups),
-   suggested use, warnings; plus `<meta>` for SEO/canonical.
-5. **Image / review fallbacks** from rendered HTML when structured sources are thin.
-
-Images are **unioned** across sources and deduped by canonical URL. Every field keeps evidence
-(source type, URL, excerpt, selector, confidence); conflicts add a warning and lower confidence.
-
-## 14. LLM usage
-
-The LLM (Anthropic or OpenAI, selectable via `LLM_PROVIDER`) is used **only** for open-ended work:
-evaluation narrative + prioritized recommendations, product summary, general questions, and content
-generation (rewrite / FAQ / SEO). It receives a **compact fact payload — never raw HTML** — and must
-return JSON matching the requested schema. Prompts live in `backend/app/prompts/`.
-
-## 15. Grounding & hallucination controls
-
-- Factual questions are answered **deterministically** from `ProductData` — the LLM is not in the loop.
-- Ingredient lookups use three states — **present / not_listed / unknown** — and never claim absence
-  from mere non-listing.
-- The LLM is instructed not to invent ingredients, quantities, prices, ratings, certifications, or
-  medical claims; content generation returns *claims preserved* and *claims not introduced*.
-- Missing vs. unretrievable information is distinguished throughout; evaluation is labelled **heuristic**.
-- Rendered markdown is sanitized; product HTML is never rendered raw; external links use `rel="noopener noreferrer"`.
-
-## 16. Known limitations
-
-- **No vision** — image *content* isn't inspected; nutrient *quantities* aren't OCR'd (only the ingredient list).
-- **Reviews are aggregate only** (count + rating); individual review text isn't ingested.
-- **Ephemeral state** — sessions/cache are in-memory; restarting clears them. Recent chats in the
-  sidebar are localStorage metadata; selecting one re-establishes context on the next message.
-- **Extraction is markup-dependent** — Healf's headless flight format can change; a regression suite
-  is the first production task.
-- **Site benchmark is optional/sampled** — if `backend/data/benchmark.json` is absent, evaluation stays
-  product-specific and says so (it does not claim comparison with the whole catalogue).
-
-## 17. Testing
+## Tests
 
 ```bash
-# Backend — unit + integration (mocked HTTP via respx, mocked LLM; not live-only)
-cd backend && pytest -q            # 68 tests
-
-# Frontend — component tests
-cd frontend && npm run test        # vitest
-npm run typecheck && npm run build # type + build gates
+cd backend && pytest -q       # 68 tests: URL/SSRF, each parser, merger, factual answers, evaluation, API
+cd frontend && npm test       # component tests
 ```
 
-Parser tests run against a **sanitized live fixture** (`backend/tests/fixtures/lmnt_recharge.html`).
-A live smoke test: `python scripts/probe_fixture.py` (offline) or hit the running API (§10).
+Parser tests run against a saved copy of a real Healf page (`backend/tests/fixtures/`) so they don't
+depend on the network, and the API tests mock the fetch and the LLM. There's a small offline smoke
+script too: `python scripts/probe_fixture.py`.
 
-## 18. Production changes
+Some real responses are captured in [`examples/example_outputs.md`](examples/example_outputs.md) so
+you can see output without running anything.
 
-Replace in-memory sessions/cache with Postgres/Redis; add auth, rate limiting, audit logs, model
-fallback, prompt/schema versioning, OpenTelemetry, content moderation, snapshot storage, and an
-extraction regression suite. Full list in [`docs/roadmap.md`](docs/roadmap.md).
+## What it doesn't do yet
 
-## 19. Three-month roadmap
+- No vision. It doesn't look at image content, and it reads the ingredient list but not nutrient
+  quantities.
+- Reviews are aggregate only (count and rating). Individual review text isn't pulled in.
+- State is in-memory, so sessions and the product cache reset on restart. The sidebar's recent chats
+  are just localStorage.
+- Extraction depends on Healf's current markup. If they change the flight-data format it'll need
+  updating — a regression suite over saved pages is the first thing I'd add.
 
-**Headline next capabilities:**
+## Where I'd take it next
 
-1. **Live upselling & cross-sell** — a `recommend` capability that suggests complementary catalogue
-   products, subscription upsells, and bundles, grounded in a live Healf catalogue index (real SKUs,
-   never invented).
-2. **Database persistence** — Postgres (sessions, history, product snapshots, evaluation history) +
-   Redis (hot cache, rate limiting) + object storage (raw snapshots), replacing the in-memory MVP.
-3. **Self-improving loop** — capture feedback (👍/👎, which recommendations were applied and their
-   impact), build an eval dataset, and auto-tune rubric weights/prompts + A/B test content — with
-   grounding guardrails never learned away.
+Three I'd prioritise:
 
-Then: Month 1 reliability & scale → Month 2 multimodal (vision, OCR, alt-text gen, review sentiment) →
-Month 3 operational integration (Shopify Admin writes, approval workflow, scheduled audits). Full
-detail in [`docs/roadmap.md`](docs/roadmap.md).
+1. Upsell / cross-sell. Right now it evaluates one page; the natural next capability is recommending
+   what to sell alongside it — complementary products, the subscription upsell (with the real saving
+   it already extracts), bundles — grounded in a catalogue index so the SKUs are real, not invented.
+2. Real persistence. Postgres for sessions, history and product snapshots (so answers are
+   reproducible and you can diff a page over time), Redis for caching and rate limits. That's also
+   what makes catalogue-wide audits possible.
+3. A feedback loop. Capture thumbs up/down and which recommendations actually got applied, turn that
+   into an eval set, and tune the rubric weights and prompts against it — without letting the
+   grounding rules get tuned away.
 
-## 20. Repository structure
+The longer version, plus the production hardening (auth, rate limiting, observability, content
+moderation for health claims, model fallback) is in [`docs/roadmap.md`](docs/roadmap.md). There are
+architecture notes and diagrams in [`docs/`](docs/).
+
+## Layout
 
 ```
-├── README.md
-├── docker-compose.yml
-├── docs/                       # architecture.md · roadmap.md
-├── examples/                   # example_outputs.md (real captured responses)
-├── backend/
-│   ├── app/
-│   │   ├── main.py             # FastAPI: /health /api/products/fetch /api/chat /api/chat/stream
-│   │   ├── chat_service.py     # shared pipeline (session + ingest + compose)
-│   │   ├── config.py
-│   │   ├── models/             # product · evaluation · api (Pydantic v2)
-│   │   ├── navigation/         # url_parser · validator (SSRF) · healf_client
-│   │   ├── ingestion/          # embedded_json · jsonld · html · images · reviews · shopify · merger · ingest
-│   │   ├── intelligence/       # intent_router · factual_answerer · evaluation_rules · evaluator · content_generator · response_composer · llm_client
-│   │   ├── context/            # session_store · benchmark_store
-│   │   ├── prompts/            # evaluator · writer
-│   │   └── utilities/          # text · currency · logging
-│   ├── scripts/                # build_benchmark.py · capture_examples.py · probe_fixture.py
-│   └── tests/                  # url · validator · parsers · merger · factual · evaluation · api · healf_client
-└── frontend/
-    ├── app/                    # layout · page · globals.css · api/health
-    ├── components/             # chat/ · product/ · intelligence/ · ui/
-    ├── lib/                    # api (SSE) · types · utils · local-history
-    └── test/                   # vitest component tests
+backend/app/
+  navigation/     URL parsing, SSRF validation, the live fetch client
+  ingestion/      the parsers + the merger
+  intelligence/   intent routing, factual answers, evaluation, the LLM writer, response composer
+  context/        in-memory sessions/cache, benchmark loader
+frontend/
+  components/     chat/, product/, intelligence/, ui/
+  lib/            SSE client, types, helpers
 ```
 
----
-
-_Built as a scoped MVP: strong grounding, useful conversation, and a clear path to production._
+Stack is FastAPI + httpx + BeautifulSoup/lxml + Pydantic v2 on the backend, and Next.js (App
+Router) + TypeScript + Tailwind on the frontend. The UI primitives are hand-written rather than
+pulled from a component library — there are only five of them, so it wasn't worth the dependency.

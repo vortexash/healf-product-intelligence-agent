@@ -1,14 +1,9 @@
 # Architecture
 
-## Overview
-
-The Healf Product Intelligence Agent is a **two-service** application:
-
-- **`backend/`** — FastAPI (Python 3.12) that navigates, ingests, evaluates, and answers.
-- **`frontend/`** — Next.js (App Router, TypeScript, Tailwind) chat UI that streams responses.
-
-State is intentionally ephemeral for the MVP: in-memory sessions (60 min TTL) and an
-in-memory product cache (10 min TTL). No database, no vector store, no auth.
+Two services: a FastAPI backend (Python 3.12) that does the navigating, ingesting, evaluating and
+answering, and a Next.js frontend (App Router, TypeScript, Tailwind) that's the chat UI and streams
+the responses. State is deliberately ephemeral — in-memory sessions (60 min TTL) and a product cache
+(10 min TTL), no database or vector store.
 
 ```mermaid
 flowchart TD
@@ -34,53 +29,56 @@ flowchart TD
     SSE --> U
 ```
 
-## Why Healf needs a bespoke ingestion strategy
+## Why ingestion is the way it is
 
-Healf.com is a **headless Next.js storefront** (Shopify Storefront API behind a custom
-frontend), not a classic Shopify Liquid theme. Consequences discovered from live pages:
+Healf runs on Shopify but through a headless Next.js frontend, not a Liquid theme, and that changes
+everything about how you get the data. What I found poking at live pages:
 
-| Assumption (classic Shopify) | Reality on Healf |
+| What you'd assume (classic Shopify) | What Healf actually does |
 |---|---|
-| `/products/{handle}.js` returns product JSON | Returns the Next.js app HTML (HTTP 200/404, never product JSON) |
-| Product data in Liquid-rendered HTML | Data ships in React Server Component **flight payloads** (`self.__next_f.push(...)`) |
-| One JSON-LD block | One JSON-LD `Product` with `aggregateRating` + 10 sample reviews |
-| Sections as `<h2>`/`<h3>` | Radix UI **accordions** (`button[aria-controls]` → `div[role=region]`) |
+| `/products/{handle}.js` returns product JSON | Returns the Next.js app HTML — 200 or 404, never JSON |
+| Product data sits in Liquid-rendered HTML | It's in React Server Component flight payloads (`self.__next_f.push(...)`) |
+| One JSON-LD block, maybe | One JSON-LD `Product` with `aggregateRating` and a few sample reviews |
+| Sections as `<h2>`/`<h3>` headings | Radix UI accordions (`button[aria-controls]` → `div[role=region]`) |
 
-So the **embedded flight-JSON parser** is the primary source (variants, pricing,
-selling plans, images, SEO), JSON-LD supplies reviews/rating, and HTML accordions supply
-description / ingredients / suggested use. The `.js`/`.json` probe is retained (it works for
-real Shopify themes and degrades gracefully to nothing on Healf).
+So the flight-JSON parser is the primary source (variants, pricing, selling plans, images, SEO),
+JSON-LD gives reviews and rating, and the HTML accordions give description, ingredients and usage.
+The `.js`/`.json` probe is still there — it does nothing on Healf but would work on a normal Shopify
+store, so it's cheap insurance.
 
-## Source precedence (merger)
+## How the merger picks a value
+
+Default precedence when sources overlap:
 
 ```text
 shopify_json > embedded_json > json_ld > html > review_widget > derived
 ```
 
-Per-field overrides: SEO & canonical prefer HTML `<meta>`; reviews prefer JSON-LD
-`aggregateRating`; ingredients/benefits/suggested-use prefer HTML sections; images are
-**unioned** across sources (deduped by canonical URL). Every populated field keeps a
-`SourceEvidence` record (source type, URL, excerpt, selector, confidence). Conflicts add an
-extraction warning and lower confidence.
+With a few per-field exceptions: SEO and canonical prefer the HTML `<meta>` tags, reviews prefer the
+JSON-LD `aggregateRating`, and ingredients/benefits/usage prefer the HTML sections. Images are a
+special case — they get unioned across sources and deduped by canonical URL rather than one source
+winning. Every field that ends up on the product keeps a `SourceEvidence` record (source, URL,
+excerpt, selector, confidence), and when two sources disagree the merger keeps one value, drops the
+confidence, and adds an extraction warning.
 
-## Deterministic vs. LLM
+## Deterministic vs LLM
 
-- **Deterministic** (no LLM): URL validation, ingestion, ingredient lookup (with alias map),
-  reviews, price, subscription, availability, image count, and the full weighted scorecard.
-- **LLM** (optional): evaluation narrative + prioritized recommendations, product summary,
-  open-ended questions, and content generation (rewrite / FAQ / SEO). Missing key ⇒
-  rule-based fallback for evaluation/summary; content generation reports it is unavailable.
+Anything factual runs without the model: URL validation, all the ingestion, ingredient lookup (with
+an alias map), reviews, price, subscription, availability, image count, and the weighted scorecard.
+The LLM is optional and only handles the open-ended work — the evaluation narrative and ranked
+recommendations, summaries, general questions, and content generation. With no key set, evaluation
+and summary fall back to rule-based output and content generation just says it's unavailable.
 
-The LLM only ever receives a **compact fact payload** (`llm_payload.py`) — never raw HTML —
-and is instructed not to invent facts (see `prompts/`).
+The LLM only ever sees a compact fact payload (`llm_payload.py`), never raw HTML, and the prompts
+(`prompts/`) tell it not to invent facts.
 
-## Request lifecycle (streaming)
+## What happens on one streamed request
 
-1. `validate_url` — parse + SSRF check the URL (from `product_url` or extracted from the message).
-2. `fetch_product` / `read_shopify` — live fetch (cache-first), revalidating host on each redirect.
-3. `extract` — run all parsers, merge to `ProductData`, cache it.
-4. emit `product` event (rich card).
-5. `answer` — route intent → deterministic answer and/or LLM → compose.
-6. stream `token`s, then `complete` with the full `ChatResponse`.
+1. Validate the URL (from `product_url` or extracted from the message) and run the SSRF check.
+2. Fetch the live page, cache-first, re-checking the host on each redirect.
+3. Run all the parsers, merge into `ProductData`, cache it.
+4. Emit the `product` event so the UI can show the card.
+5. Route the intent to a deterministic answer and/or the LLM, then compose the response.
+6. Stream the answer as `token` events, then a final `complete` with the full response.
 
-Follow-up messages omit the URL and reuse the session's active product.
+Follow-up messages leave out the URL and reuse whatever product the session is holding.

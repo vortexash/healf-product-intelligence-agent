@@ -1,7 +1,7 @@
-# System & User Diagrams — Healf Product Intelligence Agent
+# Diagrams
 
-All diagrams are [Mermaid](https://mermaid.js.org/) — they render on GitHub, in VS Code
-(Markdown Preview Mermaid extension), and in most Markdown viewers.
+These are [Mermaid](https://mermaid.js.org/) diagrams; they render on GitHub, in VS Code with the
+Markdown Preview Mermaid extension, and in most Markdown viewers.
 
 1. [System / container overview](#1-system--container-overview)
 2. [User flow](#2-user-flow)
@@ -20,13 +20,13 @@ The big picture: a browser talking to a FastAPI backend, which talks to two exte
 
 ```mermaid
 flowchart LR
-    subgraph Client["🖥️ Browser"]
+    subgraph Client["Browser"]
         UI["Next.js Chat UI<br/>(TypeScript · Tailwind)"]
         LS["localStorage<br/>recent chats"]
         UI <--> LS
     end
 
-    subgraph Server["⚙️ Backend — FastAPI (Python)"]
+    subgraph Server["Backend - FastAPI (Python)"]
         API["HTTP API<br/>/health · /api/products/fetch<br/>/api/chat · /api/chat/stream"]
         CAP1["Navigate"]
         CAP2["Ingest"]
@@ -37,7 +37,7 @@ flowchart LR
         API <--> MEM
     end
 
-    subgraph External["🌐 External"]
+    subgraph External["External"]
         HEALF["healf.com<br/>(live product pages)"]
         LLM["LLM Provider<br/>(Anthropic / OpenAI)"]
     end
@@ -140,13 +140,13 @@ answer). Each box is a real folder/file.
 flowchart TD
     MAIN["main.py<br/>FastAPI endpoints + SSE"] --> SVC["chat_service.py<br/>pipeline + session"]
 
-    subgraph NAV["🧭 navigation/ — NAVIGATE"]
+    subgraph NAV["navigation/ (Navigate)"]
         UP["url_parser.py<br/>validate + normalize"]
         VAL["validator.py<br/>SSRF guard"]
         HC["healf_client.py<br/>live fetch + retries"]
     end
 
-    subgraph ING["📥 ingestion/ — INGEST"]
+    subgraph ING["ingestion/ (Ingest)"]
         EJ["embedded_json_parser.py<br/>(RSC flight JSON)"]
         JL["jsonld_parser.py<br/>(reviews/offers)"]
         HP["html_parser.py<br/>(accordions)"]
@@ -157,7 +157,7 @@ flowchart TD
         EJ & JL & HP & SP & RP & IP --> MG
     end
 
-    subgraph INT["🧠 intelligence/ — EVALUATE + ACT"]
+    subgraph INT["intelligence/ (Evaluate + Act)"]
         IR["intent_router.py"]
         FA["factual_answerer.py<br/>(deterministic)"]
         ER["evaluation_rules.py<br/>(scorecard)"]
@@ -171,7 +171,7 @@ flowchart TD
         EV & CG --> LC
     end
 
-    subgraph CTX["🗃️ context/"]
+    subgraph CTX["context/"]
         SS["session_store.py<br/>sessions + cache"]
         BS["benchmark_store.py"]
     end
@@ -288,12 +288,3 @@ classDiagram
     }
     ProductEvaluation ..> ProductData : evaluates
 ```
-
----
-
-### How to talk to these diagrams
-
-- **Diagram 1** answers *"what are the pieces?"* — two apps + two external systems, no DB.
-- **Diagram 3** answers *"what happens on send?"* — walk the SSE events top to bottom.
-- **Diagram 4** answers *"where are the 4 capabilities and is it extensible?"* — four isolated folders.
-- **Diagram 5** answers *"how do you use Shopify's structured data?"* — flight JSON + JSON-LD into the merger.
