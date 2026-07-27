@@ -1,5 +1,5 @@
 "use client";
-import { Plus, MessageSquare, Trash2, X, PanelLeftClose } from "lucide-react";
+import { Plus, MessageSquare, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { timeAgo } from "@/lib/utils";
@@ -14,7 +14,6 @@ interface ChatSidebarProps {
   open: boolean;
   onClose: () => void;
   collapsed: boolean;
-  onCollapse: () => void;
 }
 
 export function ChatSidebar({
@@ -26,7 +25,6 @@ export function ChatSidebar({
   open,
   onClose,
   collapsed,
-  onCollapse,
 }: ChatSidebarProps) {
   return (
     <>
@@ -46,14 +44,6 @@ export function ChatSidebar({
         <div className="flex w-72 flex-1 flex-col">
           <div className="flex items-center justify-between p-4">
             <Logo />
-            <button
-              onClick={onCollapse}
-              className="hidden h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-line/60 hover:text-ink md:grid"
-              aria-label="Collapse sidebar"
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose size={17} />
-            </button>
             <button
               onClick={onClose}
               className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-line/60 md:hidden"

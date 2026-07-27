@@ -196,7 +196,6 @@ export function ChatShell() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         collapsed={collapsed}
-        onCollapse={toggleCollapse}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
