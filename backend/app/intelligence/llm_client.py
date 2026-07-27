@@ -47,8 +47,14 @@ async def complete_json(system: str, user: str, *, max_tokens: int = 1500) -> di
     return _extract_json(text)
 
 
-async def complete_json_vision(system: str, user: str, image_urls: list[str], *, max_tokens: int = 1400) -> dict:
-    """Vision call: pass image URLs to a multimodal model and return parsed JSON."""
+async def complete_json_vision(
+    system: str, user: str, image_urls: list[str], *, max_tokens: int = 1400, detail: str = "low"
+) -> dict:
+    """Vision call: pass image URLs to a multimodal model and return parsed JSON.
+
+    detail="high" lets the model read small label text (more tokens); use "low" for
+    quick classification.
+    """
     s = get_settings()
     if not s.llm_configured:
         raise AppError("LLM_NOT_CONFIGURED", "The vision model is not configured.", 503)
@@ -56,7 +62,7 @@ async def complete_json_vision(system: str, user: str, image_urls: list[str], *,
         if s.resolved_provider == "anthropic":
             text = await _anthropic_vision(system, user, image_urls, max_tokens)
         else:
-            text = await _openai_vision(system, user, image_urls, max_tokens)
+            text = await _openai_vision(system, user, image_urls, max_tokens, detail)
     except AppError:
         raise
     except Exception as e:  # noqa: BLE001
@@ -65,13 +71,13 @@ async def complete_json_vision(system: str, user: str, image_urls: list[str], *,
     return _extract_json(text)
 
 
-async def _openai_vision(system: str, user: str, image_urls: list[str], max_tokens: int) -> str:
+async def _openai_vision(system: str, user: str, image_urls: list[str], max_tokens: int, detail: str = "low") -> str:
     from openai import AsyncOpenAI
 
     s = get_settings()
-    client = AsyncOpenAI(api_key=s.openai_api_key, timeout=45.0)
+    client = AsyncOpenAI(api_key=s.openai_api_key, timeout=60.0)
     content: list[dict] = [{"type": "text", "text": user}]
-    content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in image_urls]
+    content += [{"type": "image_url", "image_url": {"url": u, "detail": detail}} for u in image_urls]
     resp = await client.chat.completions.create(
         model=s.openai_model,
         max_tokens=max_tokens,
