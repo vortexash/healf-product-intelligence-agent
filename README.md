@@ -10,6 +10,22 @@ and **generates** improved content (rewrites, FAQs, SEO) — always showing its 
 
 > **Not a form dashboard — a specialized ChatGPT for Healf product pages.**
 
+## 🔴 Live demo
+
+**Try it: https://healf-product-intelligence-agent.vercel.app**
+
+Paste a Healf product URL and ask, e.g.:
+
+```
+https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack
+Does this have Vitamin D?    →  then: "What can I improve on this page?"
+```
+
+- Frontend (Vercel): https://healf-product-intelligence-agent.vercel.app
+- Backend API (Render): https://healf-product-intelligence-agent.onrender.com — `/health` returns status
+- ⏳ The backend is on a free tier that sleeps after ~15 min idle, so the **first** message may take
+  ~30–60s to wake it; everything after is fast.
+
 ---
 
 ## 1. What it does (assignment capabilities)
@@ -238,9 +254,20 @@ extraction regression suite. Full list in [`docs/roadmap.md`](docs/roadmap.md).
 
 ## 19. Three-month roadmap
 
-Month 1 reliability & scale → Month 2 multimodal (vision, OCR, alt-text gen, review sentiment) →
-Month 3 operational integration (Shopify Admin writes, approval workflow, scheduled audits). See
-[`docs/roadmap.md`](docs/roadmap.md).
+**Headline next capabilities:**
+
+1. **Live upselling & cross-sell** — a `recommend` capability that suggests complementary catalogue
+   products, subscription upsells, and bundles, grounded in a live Healf catalogue index (real SKUs,
+   never invented).
+2. **Database persistence** — Postgres (sessions, history, product snapshots, evaluation history) +
+   Redis (hot cache, rate limiting) + object storage (raw snapshots), replacing the in-memory MVP.
+3. **Self-improving loop** — capture feedback (👍/👎, which recommendations were applied and their
+   impact), build an eval dataset, and auto-tune rubric weights/prompts + A/B test content — with
+   grounding guardrails never learned away.
+
+Then: Month 1 reliability & scale → Month 2 multimodal (vision, OCR, alt-text gen, review sentiment) →
+Month 3 operational integration (Shopify Admin writes, approval workflow, scheduled audits). Full
+detail in [`docs/roadmap.md`](docs/roadmap.md).
 
 ## 20. Repository structure
 

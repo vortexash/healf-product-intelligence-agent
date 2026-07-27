@@ -2,6 +2,48 @@
 
 The MVP is a deliberately scoped, well-grounded foundation. The path to production:
 
+## Headline next capabilities
+
+Three investments that turn the MVP from a single-page advisor into a durable, revenue-aware,
+self-improving system:
+
+### 1. Live upselling & cross-sell recommendations
+Beyond evaluating one page, recommend what to sell *with* it. A new **`recommend` capability**
+that, grounded in the live Healf catalogue:
+- suggests **complementary products** ("pairs well with…") using product type, tags, benefits, and
+  goal metafields (e.g. Electrolytes → recovery, sleep, hydration bottles);
+- pushes the **subscription upsell** with the real saving already extracted (e.g. "subscribe and
+  save 10%"), and proposes **bundles** ("variety pack + shaker");
+- answers merchandising questions ("what should we cross-sell on this PDP?") with ranked,
+  evidence-backed picks — never invented SKUs, always real catalogue items with links.
+Data source: extend the benchmark crawler into a lightweight **catalogue index** (handle, type,
+tags, price, benefits) so recommendations are grounded, not hallucinated.
+
+### 2. Proper database storage & persistence
+Replace the in-memory session store and product cache (which reset on restart) with durable storage:
+- **Postgres** for sessions, conversation history, product **snapshots** (so answers are
+  reproducible and diffable over time), and evaluation history per product;
+- **Redis** for the hot product cache and rate limiting;
+- **object storage** for raw page snapshots (audit trail / regression fixtures).
+This unlocks catalogue-wide audits, "what changed since last week?" comparisons, and multi-user
+history — none of which the ephemeral MVP can do.
+
+### 3. Self-improving loop
+Close the feedback loop so the agent gets better with use:
+- **capture signals** — thumbs up/down on answers, which recommendations were *applied* to a
+  listing, and whether applied changes moved reviews/conversion;
+- **build an eval dataset** from those signals + human corrections;
+- **auto-tune** the evaluation rubric weights and prompts against the dataset, and **A/B test**
+  generated content variants;
+- **continuously refresh the site benchmark** from the crawler so "what good looks like" tracks the
+  catalogue as it evolves.
+Guardrail: all tuning is offline-evaluated before rollout, and grounding rules (no invented facts,
+no medical claims) are never learned away.
+
+---
+
+## The phased plan
+
 ## Month 1 — Reliability & scale
 
 - Replace in-memory sessions/cache with **Postgres + Redis**.
