@@ -165,6 +165,19 @@ The MVP is deliberately read-only with in-memory state. The three capabilities I
 3. **A feedback loop** - capture which recommendations get applied and their impact, and tune the
    rubric and prompts against real outcomes.
 
+Bigger bets I'd add after that:
+
+- **Buy from the chat.** It already extracts the variant, selling plan, price and stock, so it can
+  offer "add to basket", "buy now" or "subscribe and save" inline, handing off to Healf's real
+  checkout with the variant and selling plan pre-filled (no card data ever touches the agent).
+- **Human in the loop.** Escalate low-confidence or health-sensitive questions to a Healf expert
+  instead of guessing; let a human enrich data the agent couldn't extract; and require human approval
+  before any generated copy is written back to the store.
+- **Shopper intelligence.** Goal-based recommendations ("I want better sleep, is this right for
+  me?"), product comparison, allergen and diet answers, and review sentiment.
+- **Merchandiser tools.** Bulk audits across a whole collection, brand-consistency checks, and
+  shareable evaluation reports.
+
 **For production** you'd also add auth, rate limiting, audit logs, observability, model fallback, and
 content moderation for health claims (which matters more than usual for a supplements marketplace),
 plus an extraction regression suite (Healf's markup can change).
