@@ -148,6 +148,24 @@ async def _handle_summary(product, message, out: Composed) -> None:
     out.evidence = product.evidence
 
 
+_GENERAL_SYSTEM = """You are a helpful assistant for a health and wellness marketplace,
+answering questions about a specific product page.
+
+You are given the user's question and structured facts extracted from the live product page.
+
+Rules:
+1. For facts about THIS product (its price, ingredients, reviews, availability, benefits,
+   certifications), use only the supplied facts. If they don't contain it, say the page doesn't show it.
+2. For general-knowledge questions (e.g. "what is tartaric acid?", "what is magnesium used for?"),
+   you may use your own general knowledge to give a brief, helpful explanation. Make clear it is
+   general information, not a claim about this specific product.
+3. Never invent product-specific facts, prices, or certifications.
+4. Do not give medical advice or make disease-treatment claims.
+5. Be concise and friendly.
+
+Return ONLY JSON: {"answer": "..."}"""
+
+
 async def _handle_general(product, message, out: Composed) -> None:
     if not llm_client.is_configured():
         out.answer = ChatAnswer(
@@ -158,13 +176,18 @@ async def _handle_general(product, message, out: Composed) -> None:
         return
     try:
         user = json.dumps(
-            {"task": "Answer the user's question using ONLY these product facts. If the facts do not contain the answer, say so.", "user_message": message, "product": product_facts(product)},
+            {
+                "user_question": message,
+                "product_facts": product_facts(product),
+            },
             default=str,
         )
-        data = await llm_client.complete_json(
-            eval_prompt.SYSTEM + '\nReturn ONLY JSON: {"answer": "..."}', user, max_tokens=700
+        data = await llm_client.complete_json(_GENERAL_SYSTEM, user, max_tokens=700)
+        out.answer = ChatAnswer(
+            text=str(data.get("answer", "")) or "I could not answer that.",
+            intent="general_product_question",
+            confidence="medium",
         )
-        out.answer = ChatAnswer(text=str(data.get("answer", "")) or "I could not answer that from the page.", intent="general_product_question", confidence="medium", limitations=["Answered from extracted page facts only."])
     except Exception:  # noqa: BLE001
         out.answer = _rule_summary(product)
     out.evidence = product.evidence
