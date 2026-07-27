@@ -22,8 +22,8 @@ def suggest_follow_ups(product: ProductData, intent: str) -> list[str]:
         # (prompt, is-relevant-for-this-product-and-not-the-current-intent)
         ("What can I improve on this page?", intent != "page_evaluation"),
         (
-            "Check the ingredients" if intent != "ingredient_lookup" else "Check another nutrient",
-            bool(product.ingredients_raw or product.ingredient_groups),
+            "Check the ingredients",
+            bool(product.ingredients_raw or product.ingredient_groups) and intent != "ingredient_lookup",
         ),
         (
             "Compare one-time vs subscription pricing",
