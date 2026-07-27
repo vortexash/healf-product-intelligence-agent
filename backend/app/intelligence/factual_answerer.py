@@ -42,10 +42,36 @@ def _ingredient_haystack(p: ProductData) -> str:
     return normalize(" ".join(parts))
 
 
+def _list_ingredients(p: ProductData) -> ChatAnswer:
+    """List the product's ingredients (grouped by flavour/variant when present)."""
+    if len(p.ingredient_groups) > 1:
+        lines = [f"**{name}:** {', '.join(items)}" for name, items in p.ingredient_groups.items()]
+        text = "Here are the ingredients listed on the live page:\n\n" + "\n\n".join(lines)
+    else:
+        text = f"Here are the ingredients listed on the live page:\n\n{p.ingredients_raw}"
+    return ChatAnswer(
+        text=text,
+        intent="ingredient_lookup",
+        confidence="high",
+        limitations=["Formulations can change; always check the physical label."],
+    )
+
+
 def answer_ingredient(p: ProductData, term: str | None) -> ChatAnswer:
+    has_ingredients = bool(p.ingredients_raw or p.ingredient_groups)
+
+    # No specific ingredient asked ("what are the ingredients?") -> list them all.
     if not term:
-        term = "that ingredient"
-    if not p.ingredients_raw and not p.ingredient_groups:
+        if has_ingredients:
+            return _list_ingredients(p)
+        return ChatAnswer(
+            text="I could not find an ingredients section on the live product page.",
+            intent="ingredient_lookup",
+            confidence="low",
+            limitations=["No ingredients section was extracted from the public page."],
+        )
+
+    if not has_ingredients:
         return ChatAnswer(
             text=(
                 f"I could not find an ingredients section on the live page, so I cannot confirm "

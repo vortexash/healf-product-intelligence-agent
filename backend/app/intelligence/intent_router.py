@@ -42,7 +42,7 @@ _RULES: list[tuple[str, list[str]]] = [
     ("price_lookup", [r"\bprice\b", r"\bcost\b", r"how much", r"\bcheaper\b", r"\bexpensive\b", r"\bdiscount\b"]),
     ("availability_lookup", [r"in stock", r"\bavailable\b", r"availability", r"sold out", r"out of stock"]),
     ("review_lookup", [r"\breviews?\b", r"\bratings?\b", r"\bstars?\b", r"how many .*review"]),
-    ("ingredient_lookup", [r"\bingredient", r"\bcontain", r"\binclude", r"does it have", r"\bvitamin", r"\bmagnesium\b", r"\bcaffeine\b", r"\bsugar\b", r"\ballergen", r"\bnutrition", r"is there .* in (it|this)"]),
+    ("ingredient_lookup", [r"\bingredi", r"\bcontain", r"\binclude", r"does it have", r"\bvitamin", r"\bmagnesium\b", r"\bcaffeine\b", r"\bsugar\b", r"\ballergen", r"\bnutrition", r"is there .* in (it|this)", r"what.?s (in|inside)\b"]),
     ("page_evaluation", [r"\bimprove\b", r"what.?s (wrong|missing)", r"evaluate", r"assessment", r"how good", r"quality of (this|the) page", r"whats? missing", r"audit"]),
     ("product_summary", [r"\bsummar", r"\btell me about\b", r"what is this", r"overview", r"describe (this|the) product"]),
 ]
