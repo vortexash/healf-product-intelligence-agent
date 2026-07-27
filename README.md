@@ -148,9 +148,18 @@ Three I'd prioritise:
    into an eval set, and tune the rubric weights and prompts against it - without letting the
    grounding rules get tuned away.
 
-The longer version, plus the production hardening (auth, rate limiting, observability, content
-moderation for health claims, model fallback) is in [`docs/roadmap.md`](docs/roadmap.md). There are
-architecture notes and diagrams in [`docs/`](docs/).
+On a rough three-month horizon: month one is reliability - move state to Postgres/Redis and add an
+extraction regression suite (the flight-data format is the thing most likely to break quietly when
+the site changes), plus a background crawler that keeps the benchmark fresh. Month two is the
+multimodal work that removes the current blind spots: vision over product images, nutrition-label
+OCR for actual quantities, and alt-text generation. Month three is where it stops being an advisor
+and starts acting - writing drafts back to Shopify Admin behind a human approval step, scheduled
+catalogue audits, and a launch-readiness check.
+
+For production you'd also want auth, rate limiting, audit logs, observability, model fallback, and
+content moderation for health claims (which matters more than usual for supplements). The full
+version is in [`docs/roadmap.md`](docs/roadmap.md), and there are architecture notes and diagrams in
+[`docs/`](docs/).
 
 ## Layout
 
