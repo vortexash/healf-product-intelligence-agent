@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ProductCard } from "@/components/product/product-card";
-import { EvidenceDrawer } from "@/components/intelligence/evidence-drawer";
 import { AgentProgress } from "@/components/chat/agent-progress";
 import { Scorecard } from "@/components/intelligence/scorecard";
 import { Message } from "@/components/chat/message";
@@ -55,24 +54,6 @@ describe("AgentProgress", () => {
   });
 });
 
-describe("EvidenceDrawer", () => {
-  it("opens and lists evidence, closes on button", () => {
-    const onClose = vi.fn();
-    render(
-      <EvidenceDrawer
-        open
-        evidence={[{ field: "reviews", source_type: "json_ld", source_url: "u", excerpt: "rating=4.9", confidence: 0.9 }]}
-        onClose={onClose}
-      />,
-    );
-    expect(screen.getByText("Reviews")).toBeInTheDocument();
-    expect(screen.getByText(/rating=4.9/)).toBeInTheDocument();
-    expect(screen.queryByText("reviews")).toBeNull(); // raw field name hidden
-    fireEvent.click(screen.getByLabelText("Close sources"));
-    expect(onClose).toHaveBeenCalled();
-  });
-});
-
 describe("Scorecard", () => {
   it("renders categories and overall score", () => {
     const evaluation: ProductEvaluation = {
@@ -109,20 +90,18 @@ describe("Citations", () => {
   });
 });
 
-describe("Message error rendering + evidence button", () => {
+describe("Message", () => {
   it("renders an error message", () => {
     render(
       <Message
         m={{ id: "1", role: "assistant", text: "", error: { code: "UNSUPPORTED_HOST", message: "Only Healf URLs allowed." } }}
-        onOpenEvidence={() => {}}
         onFollowUp={() => {}}
       />,
     );
     expect(screen.getByText("Only Healf URLs allowed.")).toBeInTheDocument();
   });
 
-  it("shows an Evidence button and fires the callback", () => {
-    const onOpen = vi.fn();
+  it("shows the plain source line but no confidence badge or internal labels", () => {
     render(
       <Message
         m={{
@@ -130,13 +109,13 @@ describe("Message error rendering + evidence button", () => {
           role: "assistant",
           text: "Vitamin D is not listed.",
           answer: { text: "Vitamin D is not listed.", intent: "ingredient_lookup", confidence: "high", limitations: [] },
-          evidence: [{ field: "ingredients_raw", source_type: "html", source_url: "u", confidence: 0.8 }],
+          evidence: [{ field: "ingredients_raw", source_type: "html", source_url: "https://healf.com/products/x", confidence: 0.8 }],
         }}
-        onOpenEvidence={onOpen}
         onFollowUp={() => {}}
       />,
     );
-    fireEvent.click(screen.getByText(/View sources/));
-    expect(onOpen).toHaveBeenCalled();
+    expect(screen.getByText(/the live Healf product page/)).toBeInTheDocument();
+    expect(screen.queryByText(/confidence/i)).toBeNull();
+    expect(screen.queryByText(/ingredient lookup/i)).toBeNull();
   });
 });

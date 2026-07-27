@@ -7,7 +7,6 @@ import { ChatComposer } from "./chat-composer";
 import { Message } from "./message";
 import { ProductContextChip } from "@/components/product/product-context-chip";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { EvidenceDrawer } from "@/components/intelligence/evidence-drawer";
 import { streamChat, getHealth } from "@/lib/api";
 import {
   loadHistory,
@@ -17,7 +16,7 @@ import {
   loadThread,
   type HistoryEntry,
 } from "@/lib/local-history";
-import type { ProductData, SourceEvidence } from "@/lib/types";
+import type { ProductData } from "@/lib/types";
 import type { ThreadMessage } from "./model";
 
 const INTRO_PROMPTS = [
@@ -45,10 +44,6 @@ export function ChatShell() {
   // URL of the reopened chat's product, sent with the next message so context is
   // re-established even if the in-memory server session has expired.
   const [pendingProductUrl, setPendingProductUrl] = useState<string | null>(null);
-  const [drawer, setDrawer] = useState<{ open: boolean; evidence: SourceEvidence[]; at?: string | null }>({
-    open: false,
-    evidence: [],
-  });
   const [llmConfigured, setLlmConfigured] = useState<boolean | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -253,14 +248,7 @@ export function ChatShell() {
             ) : (
               <div className="space-y-7">
                 {messages.map((m) => (
-                  <Message
-                    key={m.id}
-                    m={m}
-                    onOpenEvidence={(msg) =>
-                      setDrawer({ open: true, evidence: msg.evidence ?? [], at: msg.product?.retrieved_at })
-                    }
-                    onFollowUp={(p) => send(p)}
-                  />
+                  <Message key={m.id} m={m} onFollowUp={(p) => send(p)} />
                 ))}
                 <div ref={bottomRef} className="h-1" />
               </div>
@@ -277,13 +265,6 @@ export function ChatShell() {
           onClearProduct={newChat}
         />
       </div>
-
-      <EvidenceDrawer
-        open={drawer.open}
-        evidence={drawer.evidence}
-        retrievedAt={drawer.at}
-        onClose={() => setDrawer((d) => ({ ...d, open: false }))}
-      />
     </div>
   );
 }
