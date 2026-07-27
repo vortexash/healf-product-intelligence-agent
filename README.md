@@ -49,6 +49,8 @@ easy to extend.
 
 ## What you can ask
 
+![How you use the agent](examples/screenshots/user-flow.png)
+
 Paste a URL, then ask. These are the kinds of questions it handles (including the three from the
 brief):
 
