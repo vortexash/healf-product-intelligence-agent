@@ -47,6 +47,53 @@ async def complete_json(system: str, user: str, *, max_tokens: int = 1500) -> di
     return _extract_json(text)
 
 
+async def complete_json_vision(system: str, user: str, image_urls: list[str], *, max_tokens: int = 1400) -> dict:
+    """Vision call: pass image URLs to a multimodal model and return parsed JSON."""
+    s = get_settings()
+    if not s.llm_configured:
+        raise AppError("LLM_NOT_CONFIGURED", "The vision model is not configured.", 503)
+    try:
+        if s.resolved_provider == "anthropic":
+            text = await _anthropic_vision(system, user, image_urls, max_tokens)
+        else:
+            text = await _openai_vision(system, user, image_urls, max_tokens)
+    except AppError:
+        raise
+    except Exception as e:  # noqa: BLE001
+        log.warning("LLM vision call failed: %s", e)
+        raise AppError("LLM_TIMEOUT", "The vision model did not respond in time.", 504)
+    return _extract_json(text)
+
+
+async def _openai_vision(system: str, user: str, image_urls: list[str], max_tokens: int) -> str:
+    from openai import AsyncOpenAI
+
+    s = get_settings()
+    client = AsyncOpenAI(api_key=s.openai_api_key, timeout=45.0)
+    content: list[dict] = [{"type": "text", "text": user}]
+    content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in image_urls]
+    resp = await client.chat.completions.create(
+        model=s.openai_model,
+        max_tokens=max_tokens,
+        response_format={"type": "json_object"},
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": content}],
+    )
+    return resp.choices[0].message.content or ""
+
+
+async def _anthropic_vision(system: str, user: str, image_urls: list[str], max_tokens: int) -> str:
+    from anthropic import AsyncAnthropic
+
+    s = get_settings()
+    client = AsyncAnthropic(api_key=s.anthropic_api_key, timeout=45.0)
+    content: list[dict] = [{"type": "text", "text": user}]
+    content += [{"type": "image", "source": {"type": "url", "url": u}} for u in image_urls]
+    msg = await client.messages.create(
+        model=s.anthropic_model, max_tokens=max_tokens, system=system, messages=[{"role": "user", "content": content}]
+    )
+    return "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
+
+
 async def _anthropic(system: str, user: str, max_tokens: int) -> str:
     from anthropic import AsyncAnthropic
 

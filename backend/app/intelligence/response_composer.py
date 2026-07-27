@@ -10,7 +10,7 @@ from ..models import (
     ProductEvaluation,
     SourceEvidence,
 )
-from . import content_generator, evaluator, factual_answerer as fa, llm_client
+from . import content_generator, evaluator, factual_answerer as fa, image_analyzer, llm_client
 from .intent_router import IntentResult, classify
 from .llm_payload import product_facts
 from ..prompts import evaluator as eval_prompt
@@ -82,7 +82,10 @@ async def compose(product: ProductData, message: str, prior_user_messages: list[
     elif i == "availability_lookup":
         out.answer = fa.answer_availability(product)
         out.evidence = _evidence_for(product, ["available"])
-    elif i in ("page_evaluation", "seo_evaluation", "image_evaluation"):
+    elif i == "image_evaluation":
+        out.answer = await image_analyzer.analyze_images(product, message)
+        out.evidence = _evidence_for(product, ["images"])
+    elif i in ("page_evaluation", "seo_evaluation"):
         await _handle_evaluation(product, message, i, out)
     elif i in ("content_rewrite", "faq_generation"):
         await _handle_content(product, message, i, out)

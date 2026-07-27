@@ -105,6 +105,9 @@ h3 {
 .prose-chat code {
   @apply bg-healf-soft px-1.5 py-0.5 rounded-md text-[0.85em] font-medium text-healf-dark;
 }
+.prose-chat img {
+  @apply my-1.5 inline-block h-32 w-32 rounded-lg border border-line object-cover align-top;
+}
 .prose-chat del {
   @apply text-muted/70;
 }
