@@ -70,7 +70,7 @@ flowchart TD
     H --> J
     I --> J
     J -- "reuses active product from session" --> F
-    J --> K([Open Evidence drawer<br/>to see provenance])
+    J --> K([Follow the source link<br/>to verify on the live page])
 ```
 
 ---
@@ -222,17 +222,15 @@ flowchart LR
 flowchart TD
     PAGE["app/page.tsx"] --> SHELL["ChatShell<br/>(state: session, messages,<br/>active product, streaming)"]
 
-    SHELL --> SB["ChatSidebar<br/>(new chat + recent)"]
+    SHELL --> SB["ChatSidebar<br/>(new chat + recent, collapsible)"]
     SHELL --> MAIN2["Message thread"]
     SHELL --> COMP["ChatComposer<br/>(input + product chip)"]
-    SHELL --> DRAWER["EvidenceDrawer"]
+    SHELL --> THEME["ThemeToggle<br/>(light / dark)"]
 
     MAIN2 --> MSG["Message (per turn)"]
     MSG --> PROG["AgentProgress<br/>(live status steps)"]
     MSG --> PC["ProductCard"]
-    MSG --> ANS["Answer (markdown)<br/>+ Citations (Sources row)"]
-    MSG --> ICARD["IngredientCard"]
-    MSG --> RCARD["ReviewSummaryCard"]
+    MSG --> ANS["Answer (markdown)<br/>+ source link"]
     MSG --> SCORE["Scorecard + Recommendations"]
     MSG --> DRAFT["ContentDraftCard"]
     MSG --> CHIPS["PromptChips (follow-ups)"]

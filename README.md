@@ -76,8 +76,8 @@ brief):
 - Rewrite the product description.
 - Write an FAQ for this product.
 
-Every answer shows its sources, and an evidence drawer lets you see the exact field, excerpt, and
-confidence behind each fact. Real captured responses to these prompts are in
+Every answer carries a source line linking to the live product page it was read from. Real
+captured responses to these prompts are in
 [examples/example_outputs.md](examples/example_outputs.md), so you can review output without running
 anything.
 

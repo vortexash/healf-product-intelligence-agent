@@ -1,12 +1,8 @@
 # Example Outputs - Healf Product Intelligence Agent
 
-_Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack`). LLM configured: **True**._
+_Generated 2026-07-27T18:54:03.686895+00:00 from **live** Healf data (`https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack`). LLM configured: **True**._
 
-> These are real, unedited API responses captured against the running backend (OpenAI `gpt-4o`).
-> Factual answers (reviews, ingredients, price, availability) and the deterministic scorecard are
-> produced without the LLM; the evaluation *narrative*, prioritized *recommendations*, and the
-> content *rewrite* below are real LLM output grounded only in the extracted product facts. With no
-> LLM key set, those three degrade to a rule-based response instead (the app stays fully usable).
+> These are real, unedited API responses captured against the running backend. With no LLM key set, factual answers and the deterministic scorecard are fully live; LLM-dependent narrative/rewrites fall back to a rule-based response (shown honestly below).
 
 ## Scenario 1 - Reviews
 
@@ -24,7 +20,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 - `reviews` ← json_ld (conf 0.9) “rating=4.9 count=516”
 
-**Suggested follow-ups:** What is the rating?, Summarize the product, What can I improve?
+**Suggested follow-ups:** What can I improve on this page?, Check the ingredients, Compare one-time vs subscription pricing
 
 ---
 
@@ -36,7 +32,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 **Answer:**
 
-> **Vitamin D is not listed** in the ingredients available on the live page.
+> **vitamin d is not listed** in the ingredients available on the live page.
 > 
 > (That means it was not found in the published list - not a guarantee the product is free from it.)
 > 
@@ -49,7 +45,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 - `ingredients_raw` ← html (conf 0.85) “Citrus: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon & Lime Flavors, Stevia ”
 - `ingredient_groups` ← html (conf 0.8) “Citrus: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon & Lime Flavors, Stevia ”
 
-**Suggested follow-ups:** Show all ingredients, Check another nutrient, Evaluate this page
+**Suggested follow-ups:** What can I improve on this page?, Compare one-time vs subscription pricing, Rewrite the description
 
 ---
 
@@ -74,7 +70,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 - `ingredients_raw` ← html (conf 0.85) “Citrus: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon & Lime Flavors, Stevia ”
 - `ingredient_groups` ← html (conf 0.8) “Citrus: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon & Lime Flavors, Stevia ”
 
-**Suggested follow-ups:** Show all ingredients, Check another nutrient, Evaluate this page
+**Suggested follow-ups:** What can I improve on this page?, Compare one-time vs subscription pricing, Rewrite the description
 
 ---
 
@@ -97,7 +93,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 - `subscription_price` ← embedded_json (conf 0.8) “£17.09”
 - `one_time_price` ← json_ld (conf 0.7) “£18.99”
 
-**Suggested follow-ups:** What is the one-time price?, Evaluate this page, Summarize the product
+**Suggested follow-ups:** What can I improve on this page?, Rewrite the description, Create a better FAQ
 
 ---
 
@@ -116,11 +112,40 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 - `available` ← embedded_json (conf 0.9) 
 - `available` ← json_ld (conf 0.7) “https://schema.org/instock”
 
-**Suggested follow-ups:** What is the price?, Show reviews, Summarize the product
+**Suggested follow-ups:** What can I improve on this page?, Rewrite the description, Create a better FAQ
 
 ---
 
-## Scenario 6 - Open-ended page evaluation
+## Scenario 6 - List all ingredients
+
+**User:** `What are the ingredients?`
+
+**Intent:** `ingredient_lookup` · **Confidence:** `high`
+
+**Answer:**
+
+> Here's the ingredients for **Recharge Electrolytes - Variety Pack**, broken down by its 4 flavour blends (24 listed items in total):
+> 
+> **Citrus:** Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon & Lime Flavors, Stevia Leaf Extract
+> 
+> **Raspberry:** Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Raspberry Flavor, Stevia Leaf Extract
+> 
+> **Lemonade:** Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon Flavor, Stevia Leaf Extract
+> 
+> **Watermelon:** Salt (Sodium Chloride), Malic Acid, Magnesium Malate, Potassium Chloride, Natural Watermelon Flavor, Stevia Leaf Extract
+
+**Limitations:** Formulations can change; always check the physical label.
+
+**Evidence (2 fields):**
+
+- `ingredients_raw` ← html (conf 0.85) “Citrus: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon & Lime Flavors, Stevia ”
+- `ingredient_groups` ← html (conf 0.8) “Citrus: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon & Lime Flavors, Stevia ”
+
+**Suggested follow-ups:** What can I improve on this page?, Rewrite the description, Create a better FAQ
+
+---
+
+## Scenario 7 - Open-ended page evaluation
 
 **User:** `What can I improve on this page?`
 
@@ -128,16 +153,14 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 **Answer:**
 
-> The LMNT Recharge Electrolytes - Variety Pack is designed for an active lifestyle, offering a blend of sodium, magnesium, and potassium to help replenish essential minerals. With a high average review rating and a variety of flavors, this product supports energy metabolism and reduces fatigue. However, there are areas to improve presentation and content completeness.
+> The 'Recharge Electrolytes - Variety Pack' by LMNT excels in customer reviews with 516 ratings and a high average of 4.9. It offers a well-detailed description emphasizing the product's benefits, such as reducing tiredness and fatigue. However, the listing could improve by increasing the image count and alt-text coverage, as it falls below the Healf median. Additionally, while the ingredients are listed thoroughly, allergen information is absent, which is crucial for supplements.
 > 
-> **Overall: 89/100** (heuristic).
+> **Overall score: 89/100** (a heuristic, not an exact grade).
+> Strongest area: **SEO basics** (100/100). Weakest: **Image coverage** (46/100).
 > 
-> **Top recommendations:**
-> 1. **Enhance Image Alt Text Coverage** - Add descriptive alt text to the existing images to improve accessibility and search engine performance.
-> 2. **Increase Image Quantity** - Add at least one more image displaying the product in use or its packaging to align with the benchmark.
-> 3. **Add Allergen or Warning Information** - Include a section that outlines potential allergens or warnings related to product consumption.
+> The 3 highest-impact fixes are in the card below.
 
-**Limitations:** This is a heuristic evaluation, not an exact score.; Image content was not visually inspected (no vision in the MVP).; Individual review text was not available, limiting insights into specific customer feedback.; The page does not provide a detailed warning section, which could be crucial for users with dietary restrictions.
+**Limitations:** This is a heuristic evaluation, not an exact score.; This score judges image count and alt text, not the visual content - ask 'what do the images show?' for a visual analysis.; The product does not provide individual review texts which limits detailed sentiment analysis.; Image alt-text coverage is lacking, which may affect accessibility compliance and user experience.
 
 **Overall score:** 89/100 (heuristic)
 
@@ -152,9 +175,9 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 | SEO basics | 100 | strong |
 
 **Top recommendations:**
-- **Enhance Image Alt Text Coverage** - Add descriptive alt text to the existing images to improve accessibility and search engine performance.
-- **Increase Image Quantity** - Add at least one more image displaying the product in use or its packaging to align with the benchmark.
-- **Add Allergen or Warning Information** - Include a section that outlines potential allergens or warnings related to product consumption.
+- **Enrich with Allergen Information** - Add allergen information such as 'Contains no common allergens. Suitable for those avoiding gluten, soy, and dairy.'
+- **Enhance Image Alt-Text for Accessibility** - Include detailed alt text for each image. For example, 'Product packaging showing LMNT Recharge Electrolytes - Variety Pack with sachets of Watermelon, Citrus, Lemonade, and Raspberry flavors.'
+- **Add More Visual Content** - Add lifestyle images showing the electrolytes being mixed or consumed in different scenarios, such as during a workout or at a desk, to convey its versatility and enhance customer engagement.
 
 **Evidence (27 fields):**
 
@@ -164,11 +187,47 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 - `available` ← embedded_json (conf 0.9) 
 - `seo` ← embedded_json (conf 0.9) “LMNT Recharge Electrolytes - Variety Pack (12 Pack)”
 
-**Suggested follow-ups:** Rewrite the description, Create a better FAQ, Improve the SEO
+**Suggested follow-ups:** Rewrite the description, Create a better FAQ, Are the images good enough?
 
 ---
 
-## Scenario 7 - Follow-up: rewrite the top section
+## Scenario 8 - Vision: read the product images
+
+**User:** `What do the product images show?`
+
+**Intent:** `image_evaluation` · **Confidence:** `medium`
+
+**Answer:**
+
+> I looked at 3 of this product's 3 images:
+> 
+> ![image 1](https://cdn.shopify.com/s/files/1/0405/7291/1765/files/5_71a1a224-492a-44a0-b10f-345681555187.png?v=1776664794)
+> **Hero** - Product packaging and stick packs  
+> Visible text: "ZERO SUGAR HYDRATION"
+> 
+> ![image 2](https://cdn.shopify.com/s/files/1/0405/7291/1765/files/LMNT-VP_1.png?v=1782808644)
+> **Supplement Facts** - Supplement facts and ingredients list  
+> Visible text: "Nutritional Information, Energy 21 kJ, Salt 2.50 g, Potassium 200 mg, Magnesium 60 mg"
+> 
+> ![image 3](https://cdn.shopify.com/s/files/1/0405/7291/1765/files/3_74d81df9-4827-4d3d-a584-9c94a4772839.png?v=1776665087)
+> **Packaging** - Product packaging with focus on flavor variety  
+> Visible text: "ZERO SUGAR HYDRATION, 12 STICK PACKS, CITRUS SALT, RASPBERRY SALT, LEMONADE SALT, WATERMELON SALT"
+> 
+> **Overall:** The image set shows a variety pack of electrolyte drink mix with zero sugar. It includes a hero image showcasing the packaging and stick packs, a detailed supplement facts and ingredients label, and a packaging shot highlighting the flavor options. A clear usage or directions image is missing.
+> **Missing / would help:** a clear usage/directions image.
+
+**Limitations:** Based on an automated visual reading of the images; it can misread small or stylised text.; Alt text is present on 0/3 images (affects accessibility and SEO).
+
+**Evidence (2 fields):**
+
+- `images` ← embedded_json (conf 0.9) “1 image(s)”
+- `images` ← html (conf 0.6) “3 image(s) from HTML”
+
+**Suggested follow-ups:** Rewrite the description, Create a better FAQ, Improve the SEO title and meta description
+
+---
+
+## Scenario 9 - Follow-up: rewrite the top section
 
 **User:** `Rewrite the product description.`
 
@@ -176,36 +235,36 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 **Answer:**
 
-> Here is a draft: **Recharge Electrolytes Variety Pack**. See the draft card below - it lists which facts were used and which claims were deliberately not introduced.
+> Here is a draft: **Recharge Electrolytes - Variety Pack**. See the draft card below - it lists which facts were used and which claims were deliberately not introduced.
 
 **Limitations:** Generated from extracted facts only; review before publishing.
 
-**Draft - Recharge Electrolytes Variety Pack:**
+**Draft - Recharge Electrolytes - Variety Pack:**
 
-### Energize Your Day with LMNT Recharge Electrolytes
+### Stay Refreshed and Energized
 
-Stay refreshed and support your active lifestyle with the **LMNT Recharge Electrolytes Variety Pack**. This pack features a precise blend of essential minerals such as sodium, magnesium, and potassium designed to replenish what you lose through exercise and daily activities. 
+**LMNT Recharge Electrolytes - Variety Pack** is crafted to support your active lifestyle and well-being.
 
-- **Key Benefits:**
-  - Contains magnesium, supporting normal muscle and psychological function.
-  - Contributes to maintaining electrolyte balance.
-  - Helps reduce tiredness and fatigue.
+#### Key Benefits:
+- **Electrolyte Balance**: Contains magnesium, potassium, and sodium to help maintain electrolyte balance.
+- **Energy Support**: Helps reduce tiredness and fatigue.
+- **Muscle Function**: Supports normal muscle and psychological function.
 
-- **Flavour Variety:**
-  - Enjoy 12 sachets with 3 each of **Watermelon Salt**, **Citrus Salt**, **Lemonade**, and **Raspberry Salt**.
-  - From sweet and salty to crisp and bold, there's a flavour for every mood.
+#### Flavors You'll Love:
+Enjoy 12 sachets with exciting flavors:
+- **Watermelon Salt**
+- **Citrus Salt**
+- **Lemonade**
+- **Raspberry Salt**
 
-- **Simple to Use:**
-  - Mix one sachet with 16 ounces (500ml) of water and enjoy! 
-  - Try it with sparkling water for a refreshing mocktail twist.
+#### Easy to Use:
+Mix one sachet with 16oz (500ml) of water, or try with sparkling water for a refreshing mocktail.
 
-- **Pricing:**
-  - One-time purchase: £18.99
-  - Subscribe and save 10%: £17.09 
+#### Pricing:
+- **One-time Purchase**: £18.99
+- **Subscription**: £17.09 (10% Savings)
 
-With 516 reviews and a 4.9 rating, experience why others love LMNT Recharge Electrolytes.
-
-**Note:** This supplement should complement a balanced diet and healthy lifestyle. Consult a healthcare professional if needed.
+**Experience the burst of flavor with every sip!**
 
 **Claims not introduced:** medical claims; invented quantities; unsupported performance claims
 
@@ -217,6 +276,6 @@ With 516 reviews and a 4.9 rating, experience why others love LMNT Recharge Elec
 - `available` ← embedded_json (conf 0.9) 
 - `seo` ← embedded_json (conf 0.9) “LMNT Recharge Electrolytes - Variety Pack (12 Pack)”
 
-**Suggested follow-ups:** Create a FAQ, Improve the SEO title, Evaluate this page
+**Suggested follow-ups:** Create a better FAQ, Improve the SEO title and meta description, Summarize the product
 
 ---

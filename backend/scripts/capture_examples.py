@@ -3,11 +3,12 @@
 Run with backend up on :8000. Produces grounded, non-invented outputs.
 """
 import json
+import os
 import sys
 import urllib.request
 from datetime import datetime, timezone
 
-BASE = "http://127.0.0.1:8000"
+BASE = os.environ.get("CAPTURE_BASE", "http://127.0.0.1:8000")
 URL = "https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack"
 
 
@@ -15,7 +16,7 @@ def post(path, payload):
     req = urllib.request.Request(
         BASE + path, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(req, timeout=60) as r:
+    with urllib.request.urlopen(req, timeout=150) as r:
         return json.loads(r.read())
 
 
@@ -27,8 +28,10 @@ def main():
         ("Scenario 3 - Ingredient present (Magnesium)", "Does it contain magnesium?", "session"),
         ("Scenario 4 - Pricing & subscription", "Compare one-time and subscription pricing.", "session"),
         ("Scenario 5 - Availability", "Is it in stock?", "session"),
-        ("Scenario 6 - Open-ended page evaluation", "What can I improve on this page?", "session"),
-        ("Scenario 7 - Follow-up: rewrite the top section", "Rewrite the product description.", "session"),
+        ("Scenario 6 - List all ingredients", "What are the ingredients?", "session"),
+        ("Scenario 7 - Open-ended page evaluation", "What can I improve on this page?", "session"),
+        ("Scenario 8 - Vision: read the product images", "What do the product images show?", "session"),
+        ("Scenario 9 - Follow-up: rewrite the top section", "Rewrite the product description.", "session"),
     ]
 
     out = ["# Example Outputs - Healf Product Intelligence Agent", ""]

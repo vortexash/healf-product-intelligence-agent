@@ -96,9 +96,11 @@ thing most likely to break quietly when the site changes). Turn the on-demand be
 background crawler, add real review-provider adapters (Okendo/Yotpo) for full review text, and add
 observability for extraction success rates per source.
 
-**Month 2: Multimodal.** Remove the current blind spots: vision over product images (hero vs
-lifestyle vs nutrition label, quality and duplicate checks), OCR on nutrition labels for actual
-quantities, alt-text generation for images that lack it, and review sentiment and topics.
+**Month 2: Multimodal, deepened.** The MVP already reads image content on demand (classifying each
+image and reading label text when asked). Month two makes that systematic: run vision at ingest time
+for every product rather than on request, full OCR of nutrition panels into structured per-nutrient
+quantities, automatic label-vs-page consistency checks, alt-text generation for images that lack it,
+and review sentiment and topics.
 
 **Month 3: Acting on findings.** Where it stops being an advisor and starts acting: writing drafts
 back to Shopify Admin behind a human approval step with version history, scheduled catalogue audits
