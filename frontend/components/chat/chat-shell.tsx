@@ -1,10 +1,11 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Menu, Sparkles } from "lucide-react";
+import { Menu, Plus, PanelLeft, PanelLeftClose, Sparkles } from "lucide-react";
 import { Logo, LeafMark } from "@/components/ui/logo";
 import { ChatSidebar } from "./chat-sidebar";
 import { ChatComposer } from "./chat-composer";
 import { Message } from "./message";
+import { ProductContextChip } from "@/components/product/product-context-chip";
 import { EvidenceDrawer } from "@/components/intelligence/evidence-drawer";
 import { streamChat, getHealth } from "@/lib/api";
 import { loadHistory, upsertHistory, removeHistory, type HistoryEntry } from "@/lib/local-history";
@@ -19,6 +20,8 @@ const INTRO_PROMPTS = [
   "Rewrite the description",
 ];
 
+const COLLAPSE_KEY = "healf.sidebar.collapsed";
+
 let counter = 0;
 const uid = () => `m${Date.now()}_${counter++}`;
 
@@ -30,6 +33,7 @@ export function ChatShell() {
   const [activeProduct, setActiveProduct] = useState<ProductData | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [drawer, setDrawer] = useState<{ open: boolean; evidence: SourceEvidence[]; at?: string | null }>({
     open: false,
     evidence: [],
@@ -37,7 +41,10 @@ export function ChatShell() {
   const [llmConfigured, setLlmConfigured] = useState<boolean | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setHistory(loadHistory()), []);
+  useEffect(() => {
+    setHistory(loadHistory());
+    setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
+  }, []);
   useEffect(() => {
     getHealth()
       .then((h) => setLlmConfigured(h.llm_configured))
@@ -46,6 +53,17 @@ export function ChatShell() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
+
+  const toggleCollapse = () =>
+    setCollapsed((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
 
   const patchLast = useCallback((patch: Partial<ThreadMessage>) => {
     setMessages((prev) => {
@@ -72,13 +90,7 @@ export function ChatShell() {
       setBusy(true);
 
       const userMsg: ThreadMessage = { id: uid(), role: "user", text };
-      const assistantMsg: ThreadMessage = {
-        id: uid(),
-        role: "assistant",
-        text: "",
-        streaming: true,
-        status: [],
-      };
+      const assistantMsg: ThreadMessage = { id: uid(), role: "assistant", text: "", streaming: true, status: [] };
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
       let sawProduct: ProductData | null = null;
@@ -140,41 +152,69 @@ export function ChatShell() {
   const empty = messages.length === 0;
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden">
+    <div className="flex h-[100dvh] overflow-hidden bg-cream">
       <ChatSidebar
         history={history}
         activeSession={sessionId}
         onNewChat={newChat}
-        onSelect={(e) => {
-          // Sessions are in-memory server-side; selecting a past chat starts fresh
-          // with its product context re-established on the next message.
-          setSidebarOpen(false);
-        }}
+        onSelect={() => setSidebarOpen(false)}
         onDelete={(id) => setHistory(removeHistory(id))}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        collapsed={collapsed}
+        onCollapse={toggleCollapse}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-line bg-cream/80 px-3 py-2 backdrop-blur md:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="rounded-full p-2 hover:bg-line" aria-label="Open menu">
+        <header className="z-10 flex h-14 shrink-0 items-center gap-1.5 border-b border-line/70 bg-cream/70 px-2.5 backdrop-blur-md sm:px-4">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-line/60 hover:text-ink md:hidden"
+            aria-label="Open menu"
+          >
             <Menu size={18} />
           </button>
-          <Logo subtitle={false} />
+          <button
+            onClick={toggleCollapse}
+            className="hidden h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-line/60 hover:text-ink md:grid"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+
+          <div className={collapsed ? "md:block" : "md:hidden"}>
+            <Logo subtitle={false} />
+          </div>
+
+          {activeProduct && (
+            <div className="ml-auto hidden min-w-0 sm:block">
+              <ProductContextChip product={activeProduct} />
+            </div>
+          )}
+          <button
+            onClick={newChat}
+            className={`grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-healf-soft hover:text-healf ${activeProduct ? "" : "ml-auto"}`}
+            aria-label="New chat"
+            title="New chat"
+          >
+            <Plus size={18} />
+          </button>
         </header>
 
         {llmConfigured === false && (
-          <div className="bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-700">
-            No LLM key configured. Factual answers work; evaluation &amp; rewrites use a rule-based fallback.
+          <div className="border-b border-amber-100 bg-amber-50/80 px-4 py-1.5 text-center text-xs text-amber-700">
+            No LLM key configured. Factual answers work; evaluation and rewrites use a rule-based fallback.
           </div>
         )}
 
-        <main className="scrollbar-thin flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl px-3 py-6 sm:px-4">
+        <main className="scrollbar-thin relative flex-1 overflow-y-auto scroll-smooth">
+          <div className="pointer-events-none sticky top-0 z-[1] h-4 bg-gradient-to-b from-cream to-transparent" />
+          <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-2 sm:px-6">
             {empty ? (
               <IntroCard onPick={(p) => setInput(p)} />
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-7">
                 {messages.map((m) => (
                   <Message
                     key={m.id}
@@ -185,7 +225,7 @@ export function ChatShell() {
                     onFollowUp={(p) => send(p)}
                   />
                 ))}
-                <div ref={bottomRef} />
+                <div ref={bottomRef} className="h-1" />
               </div>
             )}
           </div>
@@ -198,7 +238,6 @@ export function ChatShell() {
           busy={busy}
           activeProduct={activeProduct}
           onClearProduct={newChat}
-          suggestions={empty ? [] : []}
         />
       </div>
 
@@ -214,20 +253,23 @@ export function ChatShell() {
 
 function IntroCard({ onPick }: { onPick: (p: string) => void }) {
   return (
-    <div className="mx-auto mt-10 max-w-2xl text-center animate-fade-up">
-      <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-xl3 brandmark text-white shadow-lift animate-gradient-pan" style={{ backgroundSize: "200% 200%" }}>
+    <div className="mx-auto mt-10 max-w-2xl text-center animate-fade-up sm:mt-16">
+      <div
+        className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-xl3 brandmark text-white shadow-lift animate-gradient-pan"
+        style={{ backgroundSize: "200% 200%" }}
+      >
         <LeafMark className="h-8 w-8" />
       </div>
-      <h1 className="text-[2rem] font-bold leading-tight tracking-tight3">
+      <h1 className="text-[2rem] font-bold leading-[1.1] tracking-tight3 sm:text-[2.4rem]">
         The <span className="text-healf-gradient">healf</span> product intelligence agent
       </h1>
-      <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-muted">
+      <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-muted">
         Paste a public Healf product URL and ask anything: reviews, ingredients, pricing, page quality, or
         rewrites. Every answer is grounded in live product-page data, with a source for each fact.
       </p>
 
-      <div className="mt-7 overflow-hidden rounded-xl2 border border-line bg-card text-left shadow-soft">
-        <div className="flex items-center gap-2 border-b border-line bg-healf-soft/60 px-4 py-2 text-sm font-medium text-healf">
+      <div className="mt-8 overflow-hidden rounded-xl3 border border-line bg-card text-left shadow-soft">
+        <div className="flex items-center gap-2 border-b border-line bg-healf-soft/60 px-4 py-2.5 text-sm font-medium text-healf">
           <Sparkles size={15} /> Try an example
         </div>
         <code className="block break-all p-4 text-xs leading-relaxed text-muted">
@@ -236,12 +278,12 @@ function IntroCard({ onPick }: { onPick: (p: string) => void }) {
         </code>
       </div>
 
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
         {INTRO_PROMPTS.map((p) => (
           <button
             key={p}
             onClick={() => onPick(p)}
-            className="rounded-full border border-line bg-card px-3 py-1.5 text-sm text-ink transition-colors hover:border-healf-ring hover:bg-healf-soft"
+            className="rounded-full border border-line bg-card px-3.5 py-1.5 text-sm text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:border-healf-ring hover:bg-healf-soft"
           >
             {p}
           </button>

@@ -30,7 +30,7 @@ export function Message({
   if (m.role === "user") {
     return (
       <div className="flex justify-end animate-fade-up">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-xl2 rounded-tr-md bg-healf px-4 py-2.5 text-sm text-white shadow-soft">
+        <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-xl3 rounded-br-md bg-healf px-4 py-2.5 text-[15px] leading-relaxed text-white shadow-soft">
           {m.text}
         </div>
       </div>
@@ -41,14 +41,14 @@ export function Message({
   return (
     <div className="flex flex-col gap-3 animate-fade-up">
       <div className="flex items-start gap-3">
-        <div className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full brandmark text-white shadow-soft">
+        <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full brandmark text-white shadow-soft">
           <LeafMark className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1 space-y-3">
           {m.status && m.status.length > 0 && (!m.text || m.streaming) && <AgentProgress steps={m.status} done={!m.streaming} />}
 
           {m.error && (
-            <div className="flex items-start gap-2 rounded-xl2 border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="flex items-start gap-2 rounded-xl3 border border-red-200 bg-red-50 p-3.5 text-sm text-red-700">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <span>{m.error.message}</span>
             </div>
@@ -57,10 +57,12 @@ export function Message({
           {m.showProductCard && m.product && <ProductCard product={m.product} />}
 
           {m.text && (
-            <div className="rounded-xl2 rounded-tl-md border border-line bg-card px-4 py-3 shadow-soft">
-              <div className="prose-chat text-sm text-ink">
+            <div className="rounded-xl3 rounded-tl-md border border-line bg-card px-4 py-3.5 shadow-soft sm:px-5">
+              <div className="prose-chat text-[15px] text-ink">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
-                {m.streaming && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse-dot bg-healf align-middle" />}
+                {m.streaming && (
+                  <span className="ml-0.5 inline-block h-4 w-[3px] translate-y-0.5 animate-pulse-dot rounded-full bg-healf align-middle" />
+                )}
               </div>
 
               {m.answer && !m.streaming && (

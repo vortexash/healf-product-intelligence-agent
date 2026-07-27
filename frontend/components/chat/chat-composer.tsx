@@ -4,26 +4,18 @@ import { ArrowUp, Link2 } from "lucide-react";
 import { Textarea } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { ProductContextChip } from "@/components/product/product-context-chip";
-import { PromptChips } from "./prompt-chips";
 import type { ProductData } from "@/lib/types";
 
-export function ChatComposer({
-  value,
-  onChange,
-  onSend,
-  busy,
-  activeProduct,
-  onClearProduct,
-  suggestions,
-}: {
+interface ChatComposerProps {
   value: string;
   onChange: (v: string) => void;
   onSend: () => void;
   busy: boolean;
   activeProduct: ProductData | null;
   onClearProduct: () => void;
-  suggestions: string[];
-}) {
+}
+
+export function ChatComposer({ value, onChange, onSend, busy, activeProduct, onClearProduct }: ChatComposerProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -41,19 +33,14 @@ export function ChatComposer({
   };
 
   return (
-    <div className="border-t border-line bg-cream/80 backdrop-blur">
-      <div className="mx-auto w-full max-w-3xl p-3 sm:p-4">
-        {!activeProduct && suggestions.length > 0 && (
-          <div className="mb-2">
-            <PromptChips prompts={suggestions} onPick={(p) => onChange(p)} />
-          </div>
-        )}
-        <div className="rounded-xl2 border border-line bg-card p-2 shadow-soft focus-within:border-healf-ring">
-          <div className="mb-1 flex items-center justify-between px-1">
+    <div className="border-t border-line/70 bg-gradient-to-t from-cream via-cream to-cream/60 backdrop-blur">
+      <div className="mx-auto w-full max-w-3xl px-3 pb-3 pt-2.5 sm:px-6 sm:pb-4">
+        <div className="rounded-xl3 border border-line bg-card p-2.5 shadow-lift transition-colors focus-within:border-healf-ring focus-within:ring-4 focus-within:ring-healf-ring/15">
+          <div className="mb-1.5 flex items-center justify-between px-1.5">
             {activeProduct ? (
               <ProductContextChip product={activeProduct} onClear={onClearProduct} />
             ) : (
-              <span className="inline-flex items-center gap-1 text-xs text-muted">
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted">
                 <Link2 size={12} /> Paste a Healf product URL to begin
               </span>
             )}
@@ -68,17 +55,24 @@ export function ChatComposer({
               aria-label="Message"
               placeholder={
                 activeProduct
-                  ? "Ask a follow-up… (e.g. What can I improve?)"
-                  : "https://healf.com/en-uk/products/…  then your question"
+                  ? "Ask a follow-up, e.g. What can I improve?"
+                  : "https://healf.com/en-uk/products/...  then your question"
               }
-              className="max-h-52 min-h-[24px] px-2 py-1.5 text-sm"
+              className="max-h-52 min-h-[26px] px-2 py-1.5 text-[15px] leading-relaxed"
             />
-            <Button size="icon" variant="gradient" onClick={onSend} disabled={busy || !value.trim()} aria-label="Send">
+            <Button
+              size="icon"
+              variant="gradient"
+              onClick={onSend}
+              disabled={busy || !value.trim()}
+              aria-label="Send"
+              className="h-10 w-10 shrink-0"
+            >
               <ArrowUp size={18} />
             </Button>
           </div>
         </div>
-        <p className="mt-1.5 text-center text-[11px] text-muted/70">
+        <p className="mt-2 text-center text-[11px] text-muted/70">
           Grounded in live Healf data · Enter to send, Shift+Enter for a new line
         </p>
       </div>
