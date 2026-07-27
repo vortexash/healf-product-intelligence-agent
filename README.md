@@ -8,6 +8,8 @@ questions reuse the same product, so you never paste the URL twice.
 _(The backend runs on a free tier that sleeps when idle, so the first request takes 30-60s to wake
 up, then it's fast.)_
 
+![The Healf Product Intelligence Agent chat interface](examples/screenshots/app.png)
+
 ## Contents
 
 - [The four capabilities](#the-four-capabilities)
