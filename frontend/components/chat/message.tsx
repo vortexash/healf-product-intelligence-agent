@@ -48,7 +48,7 @@ export function Message({
           {m.status && m.status.length > 0 && (!m.text || m.streaming) && <AgentProgress steps={m.status} done={!m.streaming} />}
 
           {m.error && (
-            <div className="flex items-start gap-2 rounded-xl3 border border-red-200 bg-red-50 p-3.5 text-sm text-red-700">
+            <div className="flex items-start gap-2 rounded-xl3 border border-red-200 bg-red-50 p-3.5 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <span>{m.error.message}</span>
             </div>

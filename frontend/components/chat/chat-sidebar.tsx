@@ -30,7 +30,7 @@ export function ChatSidebar({
     <>
       {/* Mobile scrim */}
       <div
-        className={`fixed inset-0 z-30 bg-ink/25 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={onClose}

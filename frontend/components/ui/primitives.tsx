@@ -13,8 +13,8 @@ export function Badge({
   const tones = {
     neutral: "bg-cream text-muted border-line",
     green: "bg-healf-soft text-healf border-healf-ring/50",
-    amber: "bg-amber-50 text-amber-700 border-amber-200",
-    red: "bg-red-50 text-red-600 border-red-200",
+    amber: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/40",
+    red: "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/40",
   }[tone];
   return (
     <span

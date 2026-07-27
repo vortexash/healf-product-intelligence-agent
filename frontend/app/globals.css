@@ -3,7 +3,31 @@
 @tailwind utilities;
 
 :root {
+  /* Light theme tokens (R G B triplets) */
+  --c-cream: 251 250 247;
+  --c-card: 255 255 255;
+  --c-ink: 20 20 20;
+  --c-muted: 110 110 110;
+  --c-line: 231 229 224;
+  --c-healf: 50 117 95;
+  --c-healf-dark: 37 89 73;
+  --c-healf-soft: 235 241 238;
+  --c-healf-ring: 156 187 175;
   color-scheme: light;
+}
+
+.dark {
+  /* Dark theme tokens */
+  --c-cream: 23 24 27;
+  --c-card: 32 34 38;
+  --c-ink: 235 234 230;
+  --c-muted: 154 154 150;
+  --c-line: 48 51 57;
+  --c-healf: 88 176 143;
+  --c-healf-dark: 74 158 130;
+  --c-healf-soft: 32 55 46;
+  --c-healf-ring: 90 132 116;
+  color-scheme: dark;
 }
 
 html,

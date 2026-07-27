@@ -8,19 +8,22 @@ import type { Config } from "tailwindcss";
  */
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        cream: "#FBFAF7", // near-white warm surface (Healf leans white/minimal)
-        card: "#FFFFFF",
-        ink: "#141414", // Healf uses near-black text
-        muted: "#6E6E6E",
-        line: "#E7E5E0",
+        // CSS-variable driven so light/dark swap automatically (see globals.css).
+        // Values are "R G B" triplets; the /<alpha-value> keeps opacity modifiers working.
+        cream: "rgb(var(--c-cream) / <alpha-value>)",
+        card: "rgb(var(--c-card) / <alpha-value>)",
+        ink: "rgb(var(--c-ink) / <alpha-value>)",
+        muted: "rgb(var(--c-muted) / <alpha-value>)",
+        line: "rgb(var(--c-line) / <alpha-value>)",
         healf: {
-          DEFAULT: "#32755F", // signature green
-          dark: "#255949",
-          soft: "#EBF1EE",
-          ring: "#9CBBAF",
+          DEFAULT: "rgb(var(--c-healf) / <alpha-value>)",
+          dark: "rgb(var(--c-healf-dark) / <alpha-value>)",
+          soft: "rgb(var(--c-healf-soft) / <alpha-value>)",
+          ring: "rgb(var(--c-healf-ring) / <alpha-value>)",
           blue: "#5377BB",
           bronze: "#CB8F51",
           gold: "#F9D685",

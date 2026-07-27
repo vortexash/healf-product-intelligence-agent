@@ -6,6 +6,7 @@ import { ChatSidebar } from "./chat-sidebar";
 import { ChatComposer } from "./chat-composer";
 import { Message } from "./message";
 import { ProductContextChip } from "@/components/product/product-context-chip";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { EvidenceDrawer } from "@/components/intelligence/evidence-drawer";
 import { streamChat, getHealth } from "@/lib/api";
 import {
@@ -225,18 +226,21 @@ export function ChatShell() {
               <ProductContextChip product={activeProduct} />
             </div>
           )}
-          <button
-            onClick={newChat}
-            className={`grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-healf-soft hover:text-healf ${activeProduct ? "" : "ml-auto"}`}
-            aria-label="New chat"
-            title="New chat"
-          >
-            <Plus size={18} />
-          </button>
+          <div className={`flex items-center gap-1 ${activeProduct ? "" : "ml-auto"}`}>
+            <ThemeToggle />
+            <button
+              onClick={newChat}
+              className="grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-healf-soft hover:text-healf"
+              aria-label="New chat"
+              title="New chat"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
         </header>
 
         {llmConfigured === false && (
-          <div className="border-b border-amber-100 bg-amber-50/80 px-4 py-1.5 text-center text-xs text-amber-700">
+          <div className="border-b border-amber-100 bg-amber-50/80 px-4 py-1.5 text-center text-xs text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-300">
             No LLM key configured. Factual answers work; evaluation and rewrites use a rule-based fallback.
           </div>
         )}
