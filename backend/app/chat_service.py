@@ -48,7 +48,8 @@ async def pipeline(session: Session, message: str, product_url: str | None) -> A
     yield ("status", {"step": "answer", "message": "Preparing the answer"})
 
     # 2. Compose the answer.
-    composed = await compose(product, message)
+    prior_user_messages = [m["text"] for m in session.messages if m.get("role") == "user"]
+    composed = await compose(product, message, prior_user_messages)
     sessions.touch(session)
     session.messages.append({"role": "user", "text": message})
     session.messages.append({"role": "assistant", "text": composed.answer.text if composed.answer else ""})

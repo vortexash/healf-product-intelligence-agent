@@ -15,37 +15,31 @@ from .intent_router import IntentResult, classify
 from .llm_payload import product_facts
 from ..prompts import evaluator as eval_prompt
 
-def suggest_follow_ups(product: ProductData, intent: str) -> list[str]:
-    """Build follow-up prompts from what THIS product actually has, skipping
-    whatever the user just asked. Deterministic and grounded (no LLM call)."""
-    candidates: list[tuple[str, bool]] = [
-        # (prompt, is-relevant-for-this-product-and-not-the-current-intent)
-        ("What can I improve on this page?", intent != "page_evaluation"),
-        (
-            "Check the ingredients",
-            bool(product.ingredients_raw or product.ingredient_groups) and intent != "ingredient_lookup",
-        ),
-        (
-            "Compare one-time vs subscription pricing",
-            bool(product.subscription_price) and intent not in ("subscription_lookup", "price_lookup"),
-        ),
-        ("What is the rating?", bool(product.reviews.present) and intent != "review_lookup"),
-        ("Does it have reviews?", product.reviews.present is None and intent != "review_lookup"),
-        ("Rewrite the description", bool(product.description_text) and intent != "content_rewrite"),
-        ("Create a better FAQ", intent != "faq_generation"),
-        ("Are the images good enough?", bool(product.images) and intent != "image_evaluation"),
-        ("Improve the SEO title and meta description", intent != "seo_evaluation"),
-        ("Is it in stock?", product.available is not None and intent != "availability_lookup"),
-        ("Summarize the product", intent != "product_summary"),
+def suggest_follow_ups(
+    product: ProductData, current_intent: str, asked_intents: frozenset[str] = frozenset()
+) -> list[str]:
+    """Build follow-up prompts from what THIS product actually has, skipping any
+    action already asked earlier in the conversation. Deterministic, no LLM call."""
+    done = set(asked_intents) | {current_intent}
+    # (prompt, the intent it maps to, is-it-relevant-for-this-product)
+    candidates: list[tuple[str, str, bool]] = [
+        ("What can I improve on this page?", "page_evaluation", True),
+        ("Check the ingredients", "ingredient_lookup", bool(product.ingredients_raw or product.ingredient_groups)),
+        ("Compare one-time vs subscription pricing", "subscription_lookup", bool(product.subscription_price)),
+        ("What is the rating?", "review_lookup", bool(product.reviews.present)),
+        ("Does it have reviews?", "review_lookup", product.reviews.present is None),
+        ("Rewrite the description", "content_rewrite", bool(product.description_text)),
+        ("Create a better FAQ", "faq_generation", True),
+        ("Are the images good enough?", "image_evaluation", bool(product.images)),
+        ("Improve the SEO title and meta description", "seo_evaluation", True),
+        ("Is it in stock?", "availability_lookup", product.available is not None),
+        ("Summarize the product", "product_summary", True),
     ]
-    picks = [prompt for prompt, ok in candidates if ok]
-    # De-dupe while preserving order, keep the top three.
-    seen: set[str] = set()
     out: list[str] = []
-    for p in picks:
-        if p not in seen:
-            seen.add(p)
-            out.append(p)
+    for prompt, ikey, relevant in candidates:
+        if relevant and ikey not in done:
+            out.append(prompt)
+            done.add(ikey)  # don't offer two prompts for the same intent
         if len(out) == 3:
             break
     return out
@@ -66,10 +60,11 @@ def _evidence_for(product: ProductData, fields: list[str]) -> list[SourceEvidenc
     return [e for e in product.evidence if e.field in fields] or product.evidence
 
 
-async def compose(product: ProductData, message: str) -> Composed:
+async def compose(product: ProductData, message: str, prior_user_messages: list[str] | None = None) -> Composed:
     intent = classify(message)
     out = Composed()
-    out.suggested_actions = suggest_follow_ups(product, intent.intent)
+    asked = frozenset(classify(m).intent for m in (prior_user_messages or []))
+    out.suggested_actions = suggest_follow_ups(product, intent.intent, asked)
 
     i = intent.intent
     if i == "ingredient_lookup":
