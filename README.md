@@ -33,7 +33,9 @@ easy to extend.
 2. **Ingest** - it extracts and structures the page into one normalized `ProductData`: product text
    and description, reviews (count and rating), images and alt text, pricing (one-time and
    subscription), ingredients, variants, availability, and SEO metadata. Every field keeps evidence
-   (which source, an excerpt, a confidence). Code: `backend/app/ingestion/`.
+   (which source, an excerpt, a confidence). It can also read the **image content itself** with a
+   vision model on request, classifying each image and pulling text off nutrition panels and
+   packaging. Code: `backend/app/ingestion/`, `backend/app/intelligence/image_analyzer.py`.
 3. **Evaluate** - based on the question, it assesses the relevant parts of the listing: description
    quality, ingredient completeness, review evidence, image coverage, pricing clarity, and SEO. It
    combines deterministic signals (a weighted, labelled-heuristic score) with an LLM that writes the
@@ -59,8 +61,13 @@ brief):
 **Evaluate the listing** - a deterministic score, then the LLM prioritises the fixes:
 
 - What can I improve on this page?
-- Are the images good enough?
 - How is the SEO?
+
+**Read the images** - vision analysis of the actual image content, not just the URLs:
+
+- What do the product images show?
+- Are the images good enough?
+- Is there a nutrition-facts image? (it reads panels and packaging text)
 
 **Generate content** - grounded only in the page's actual facts:
 
@@ -200,7 +207,7 @@ The full version is in [docs/roadmap.md](docs/roadmap.md).
 
 ## Known limitations
 
-- No vision: it doesn't inspect image content, and it reads the ingredient list but not nutrient quantities.
+- Vision runs on demand (when you ask about the images), not indexed for every product up front, and it reads panels rather than doing exhaustive OCR of every label.
 - Reviews are aggregate only (count and rating); individual review text isn't pulled in.
 - State is in-memory, so it resets on restart. Recent chats in the sidebar are stored in the browser.
 - Extraction depends on Healf's current markup, so a regression suite over saved pages is the first
