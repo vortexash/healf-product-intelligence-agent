@@ -65,9 +65,10 @@ describe("EvidenceDrawer", () => {
         onClose={onClose}
       />,
     );
-    expect(screen.getByText("reviews")).toBeInTheDocument();
+    expect(screen.getByText("Reviews")).toBeInTheDocument();
     expect(screen.getByText(/rating=4.9/)).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText("Close evidence"));
+    expect(screen.queryByText("reviews")).toBeNull(); // raw field name hidden
+    fireEvent.click(screen.getByLabelText("Close sources"));
     expect(onClose).toHaveBeenCalled();
   });
 });
@@ -89,22 +90,22 @@ describe("Scorecard", () => {
 });
 
 describe("Citations", () => {
-  it("groups evidence by source and links to the live page", () => {
+  it("shows a single plain-English source line linking to the live page (no jargon)", () => {
     render(
       <Citations
         evidence={[
           { field: "reviews", source_type: "json_ld", source_url: "https://healf.com/products/x", confidence: 0.9 },
           { field: "ingredients_raw", source_type: "html", source_url: "https://healf.com/products/x", confidence: 0.85 },
-          { field: "title", source_type: "html", source_url: "https://healf.com/products/x", confidence: 0.8 },
         ]}
       />,
     );
-    expect(screen.getByText("Sources:")).toBeInTheDocument();
-    expect(screen.getByText("JSON-LD")).toBeInTheDocument();
-    expect(screen.getByText("Product page HTML")).toBeInTheDocument();
-    const links = screen.getAllByRole("link");
-    expect(links[0]).toHaveAttribute("href", "https://healf.com/products/x");
-    expect(links[0]).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getByText(/the live Healf product page/)).toBeInTheDocument();
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "https://healf.com/products/x");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    // Internal identifiers must not leak to the user.
+    expect(screen.queryByText("JSON-LD")).toBeNull();
+    expect(screen.queryByText(/ingredients_raw/)).toBeNull();
   });
 });
 
@@ -135,7 +136,7 @@ describe("Message error rendering + evidence button", () => {
         onFollowUp={() => {}}
       />,
     );
-    fireEvent.click(screen.getByText(/Evidence/));
+    fireEvent.click(screen.getByText(/View sources/));
     expect(onOpen).toHaveBeenCalled();
   });
 });

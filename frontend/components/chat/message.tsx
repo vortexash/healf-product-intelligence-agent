@@ -66,13 +66,12 @@ export function Message({
 
               {m.answer && !m.streaming && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {intent && <Badge tone="neutral">{intent.replace(/_/g, " ")}</Badge>}
                   {m.answer.confidence && (
                     <Badge tone={CONF_TONE[m.answer.confidence]}>{m.answer.confidence} confidence</Badge>
                   )}
                   {m.evidence && m.evidence.length > 0 && (
                     <Button size="sm" variant="outline" onClick={() => onOpenEvidence(m)}>
-                      <FileSearch size={14} /> Evidence ({m.evidence.length})
+                      <FileSearch size={14} /> View sources ({m.evidence.length})
                     </Button>
                   )}
                 </div>
