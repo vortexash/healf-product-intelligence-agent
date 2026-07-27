@@ -97,12 +97,16 @@ async def compose(product: ProductData, message: str, prior_user_messages: list[
 async def _handle_evaluation(product, message, intent, out: Composed) -> None:
     out.evaluation = await evaluator.evaluate(product, message)
     ev = out.evaluation
-    top = ev.recommendations[:3]
-    lines = [ev.summary, "", f"**Overall: {ev.overall_score}/100** (heuristic)."]
-    if top:
-        lines.append("\n**Top recommendations:**")
-        for r in top:
-            lines.append(f"{r.priority}. **{r.title}** - {r.suggested_action}")
+    cats = sorted(ev.categories, key=lambda c: c.score)
+    lines = [ev.summary, "", f"**Overall score: {ev.overall_score}/100** (a heuristic, not an exact grade)."]
+    if cats:
+        strongest, weakest = cats[-1], cats[0]
+        lines.append(
+            f"Strongest area: **{strongest.label}** ({strongest.score}/100). "
+            f"Weakest: **{weakest.label}** ({weakest.score}/100)."
+        )
+    if ev.recommendations:
+        lines.append(f"\nThe {min(len(ev.recommendations), 3)} highest-impact fixes are in the card below.")
     conf = "medium" if ev.provisional else "high"
     out.answer = ChatAnswer(text="\n".join(lines), intent=intent, confidence=conf, limitations=ev.limitations)
     out.evidence = product.evidence

@@ -45,12 +45,13 @@ async def evaluate(p: ProductData, question: str) -> ProductEvaluation:
             "category_scores": [{"key": c.key, "score": c.score, "findings": c.findings} for c in categories],
             "overall_score": overall,
             "benchmark": benchmark.model_dump() if benchmark else None,
+            "benchmark_comparison": _benchmark_comparison(p, signals, benchmark),
             "evidence_fields_available": sorted({e.field for e in p.evidence}),
         },
         default=str,
     )
     try:
-        data = await llm_client.complete_json(prompt.SYSTEM + "\n" + prompt.SCHEMA_HINT, user, max_tokens=1600)
+        data = await llm_client.complete_json(prompt.SYSTEM + "\n" + prompt.SCHEMA_HINT, user, max_tokens=2000)
     except Exception:  # noqa: BLE001 - degrade to rules-only on any LLM failure
         recs = _fallback_recommendations(categories)
         return ProductEvaluation(
@@ -82,6 +83,29 @@ async def evaluate(p: ProductData, question: str) -> ProductEvaluation:
         limitations=base_limitations + [str(x) for x in (data.get("limitations") or [])],
         provisional=provisional,
     )
+
+
+def _benchmark_comparison(p: ProductData, signals: dict, benchmark) -> dict | None:
+    """Ready-made 'this product vs typical Healf listing' deltas for the LLM, so it
+    can cite concrete comparisons instead of guessing."""
+    if not benchmark:
+        return None
+    desc_words = signals["description"]["word_count"]
+    img_count = signals["images"]["count"]
+    alt = signals["images"]["alt_coverage"]
+    out: dict[str, str] = {}
+    if benchmark.median_description_words:
+        out["description_words"] = f"this {desc_words} vs Healf median ~{benchmark.median_description_words}"
+    if benchmark.median_image_count:
+        out["image_count"] = f"this {img_count} vs Healf median ~{benchmark.median_image_count}"
+    if benchmark.alt_text_coverage is not None:
+        out["alt_text_coverage"] = f"this {int(alt * 100)}% vs Healf average ~{int(benchmark.alt_text_coverage * 100)}%"
+    if benchmark.ingredient_section_rate is not None:
+        out["has_ingredients"] = (
+            f"this product {'has' if signals['ingredients']['section_exists'] else 'is missing'} an "
+            f"ingredients section; {int(benchmark.ingredient_section_rate * 100)}% of sampled Healf pages have one"
+        )
+    return out or None
 
 
 def _fallback_summary(p: ProductData, overall: int, categories) -> str:
