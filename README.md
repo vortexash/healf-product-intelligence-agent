@@ -1,45 +1,110 @@
 # Healf Product Intelligence Agent
 
-A chat agent for Healf product pages. Paste a product URL, ask a question in plain English, and get
-an answer pulled from the live page with a source for every fact.
+A natural-language agent for Healf product pages. Paste a product URL, ask a question in plain
+English, and get an answer grounded in the live page, with a source for every fact. Follow-up
+questions reuse the same product, so you never paste the URL twice.
 
 **Live demo:** https://healf-product-intelligence-agent.vercel.app
 _(The backend runs on a free tier that sleeps when idle, so the first request takes 30-60s to wake
 up, then it's fast.)_
 
-**Jump to:** [What you can ask](#what-you-can-ask) · [Quick start](#quick-start) ·
-[How it works](#how-it-works) · [API](#the-api) · [Tests](#tests) · [What's next](#whats-next) ·
-[Layout](#project-layout)
+**Jump to:** [Capabilities](#the-four-capabilities) · [What you can ask](#what-you-can-ask) ·
+[How it works](#how-it-works) · [Quick start](#quick-start) · [API](#the-api) · [Tests](#tests) ·
+[Roadmap](#whats-next) · [Layout](#project-layout)
 
-Built as a take-home with a ~5-hour guideline, so it's a solid foundation rather than a finished
-product. The parts worth a look are how it pulls structured data out of Healf's headless storefront,
-and how it keeps facts deterministic while using the LLM only for the open-ended work.
+## The four capabilities
+
+The agent is built around the four capabilities in the brief. Each is a separate module, so it's
+easy to extend.
+
+1. **Navigate** - given a Healf product URL, it validates the URL and fetches the live page. It
+   handles locale paths, `variant` and `selling_plan` query params, redirects, timeouts, and missing
+   pages, and it's SSRF-protected (only public `healf.com` hosts, private IPs blocked, host
+   re-checked on every redirect). Code: `backend/app/navigation/`.
+2. **Ingest** - it extracts and structures the page into one normalized `ProductData`: product text
+   and description, reviews (count and rating), images and alt text, pricing (one-time and
+   subscription), ingredients, variants, availability, and SEO metadata. Every field keeps evidence
+   (which source, an excerpt, a confidence). Code: `backend/app/ingestion/`.
+3. **Evaluate** - based on the question, it assesses the relevant parts of the listing: description
+   quality, ingredient completeness, review evidence, image coverage, pricing clarity, and SEO. It
+   combines deterministic signals (a weighted, labelled-heuristic score) with an LLM that writes the
+   narrative and prioritises fixes, grounded in the extracted data and a small live benchmark of
+   other Healf products. Code: `backend/app/intelligence/evaluation_rules.py`, `evaluator.py`.
+4. **Act on findings** - it produces a useful response: a direct factual answer, a list of issues,
+   prioritised recommendations, or improved content (a rewritten description, an FAQ, SEO copy).
+   Code: `backend/app/intelligence/factual_answerer.py`, `content_generator.py`, `response_composer.py`.
 
 ## What you can ask
 
-Paste a URL, then ask. Follow-ups reuse the same product, so you never repeat the URL.
+Paste a URL, then ask. These are the kinds of questions it handles (including the three from the
+brief):
 
-**Factual**: answered straight from the page (no LLM), always with sources:
+**Factual** - answered straight from the page, no LLM, always with sources:
 
-- Does this contain Vitamin D?
+- Does this product have any reviews?
+- Does this product have Vitamin D in it?
 - What are the ingredients?
-- How many reviews does it have, and what's the rating?
 - What's the price on subscription vs one-time?
 - Is it in stock?
 
-**Evaluate the listing**: a deterministic score, then the LLM prioritises the fixes:
+**Evaluate the listing** - a deterministic score, then the LLM prioritises the fixes:
 
 - What can I improve on this page?
 - Are the images good enough?
 - How is the SEO?
 
-**Generate content**: grounded only in the page's actual facts:
+**Generate content** - grounded only in the page's actual facts:
 
 - Rewrite the product description.
 - Write an FAQ for this product.
 
-Every answer shows the sources it used, and an evidence drawer lets you see the exact field, excerpt,
-and confidence behind each fact.
+Every answer shows its sources, and an evidence drawer lets you see the exact field, excerpt, and
+confidence behind each fact. Real captured responses to these prompts are in
+[examples/example_outputs.md](examples/example_outputs.md), so you can review output without running
+anything.
+
+## How this meets the brief
+
+- **Live data only.** Everything comes from the live `healf.com` page fetched on each request. There
+  is no pre-provided or static dataset. The optional benchmark is also generated from live pages.
+- **At least one LLM capability.** Evaluation reasoning and all content generation use the LLM.
+  Factual lookups are deliberately deterministic (and work with no API key at all).
+- **Natural-language interface.** A chat UI: give it a URL and ask in plain English. It extracts the
+  URL from your message, and follow-ups don't need it again.
+
+## How it works
+
+```
+chat UI (Next.js)
+  -> FastAPI: validate URL + SSRF check -> fetch the live page
+  -> parsers -> merge into one ProductData (every field keeps its source)
+  -> route the question -> deterministic answer, or rules + LLM
+  -> stream back over SSE (status -> product -> tokens -> done)
+```
+
+Three decisions worth calling out:
+
+**Getting structured data out of Healf.** Healf runs on Shopify but through a headless Next.js
+frontend, so the obvious `/products/{handle}.json` just returns HTML. The real data lives in three
+places and it parses all of them: the Shopify product object embedded in React Server Component
+payloads (`self.__next_f.push(...)`) for variants/pricing/subscriptions/images, a JSON-LD block for
+reviews and rating, and Radix accordions in the HTML for description/ingredients/usage. A merger
+combines them by a precedence order and keeps evidence for every field, which is what the evidence
+drawer shows. (This is the "there is structured data available beyond the page" part of the brief.)
+
+**Deterministic facts, LLM for reasoning.** Facts (ingredients, price, reviews, availability) come
+straight from the parsed data, so the LLM can't invent them. The LLM only does open-ended work
+(evaluation narrative, summaries, rewrites), and it only ever sees a trimmed dict of facts, never raw
+HTML. Ingredient answers even distinguish "not listed on the page" from "doesn't contain it", since
+those aren't the same claim.
+
+**Grounded in site context, not a generic checklist.** `scripts/build_benchmark.py` samples a
+handful of live products into a benchmark (median description length, image count, alt-text coverage,
+and so on), so evaluation can say "add one more image to match comparable pages" instead of a generic
+tip. Without the benchmark file, evaluation stays product-specific and says so.
+
+More detail and diagrams are in [docs/architecture.md](docs/architecture.md) and
+[docs/DIAGRAMS.md](docs/DIAGRAMS.md).
 
 ## Quick start
 
@@ -69,40 +134,6 @@ Open http://localhost:3000.
 Factual questions work with **no API key**. Evaluation and content generation need one: set either
 `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` and it auto-detects the provider.
 
-## How it works
-
-```
-chat UI (Next.js)
-  -> FastAPI: validate URL + SSRF check -> fetch the live page
-  -> parsers -> merge into one ProductData (every field keeps its source)
-  -> route the question -> deterministic answer, or rules + LLM
-  -> stream back over SSE (status -> product -> tokens -> done)
-```
-
-Three things worth calling out:
-
-**Getting data out of Healf.** Healf runs on Shopify but through a headless Next.js frontend, so the
-obvious `/products/{handle}.json` just returns HTML. The real data lives in three places and it
-parses all of them: the Shopify product object embedded in React Server Component payloads
-(`self.__next_f.push(...)`) for variants/pricing/subscriptions/images, a JSON-LD block for reviews
-and rating, and Radix accordions in the HTML for description/ingredients/usage. A merger combines
-them by a precedence order and keeps evidence for every field, which is what the evidence drawer
-shows.
-
-**Deterministic vs LLM.** Facts (ingredients, price, reviews, availability) come straight from the
-parsed data, so the LLM can't invent them. The LLM only does open-ended work (evaluation narrative,
-summaries, rewrites), and it only ever sees a trimmed dict of facts, never raw HTML. Ingredient
-answers even distinguish "not listed on the page" from "doesn't contain it", since those aren't the
-same claim.
-
-**Site context.** `scripts/build_benchmark.py` samples a handful of live products into a benchmark
-(median description length, image count, alt-text coverage, and so on), so evaluation can say "add
-one more image to match comparable pages" instead of a generic tip. Without it, evaluation stays
-product-specific and says so.
-
-More detail and diagrams are in [docs/architecture.md](docs/architecture.md) and
-[docs/diagrams.md](docs/DIAGRAMS.md).
-
 ## The API
 
 Four endpoints: `GET /health`, `POST /api/products/fetch`, `POST /api/chat`, and
@@ -121,24 +152,31 @@ cd frontend && npm test       # component tests
 ```
 
 Parser tests run against a saved real Healf page so they don't need the network; the API tests mock
-the fetch and the LLM. Real captured responses are in
-[examples/example_outputs.md](examples/example_outputs.md) if you want to see output without running
-anything.
+the fetch and the LLM.
 
 ## What's next
 
-The MVP is deliberately read-only with in-memory state. The three things I'd build next:
+The MVP is deliberately read-only with in-memory state. The three capabilities I'd build next:
 
-1. **Upsell / cross-sell**: recommend what to sell alongside a product (complementary items, the
+1. **Upsell / cross-sell** - recommend what to sell alongside a product (complementary items, the
    subscription upsell, bundles), grounded in a catalogue index so the SKUs are real.
-2. **Real persistence**: Postgres for sessions, history, and product snapshots (so answers are
+2. **Real persistence** - Postgres for sessions, history, and product snapshots (so answers are
    reproducible and you can diff a page over time), Redis for caching and rate limits.
-3. **A feedback loop**: capture which recommendations get applied and their impact, and tune the
+3. **A feedback loop** - capture which recommendations get applied and their impact, and tune the
    rubric and prompts against real outcomes.
 
-The full plan, three-month phasing, and production hardening are in [docs/roadmap.md](docs/roadmap.md).
+**For production** you'd also add auth, rate limiting, audit logs, observability, model fallback, and
+content moderation for health claims (which matters more than usual for a supplements marketplace),
+plus an extraction regression suite (Healf's markup can change).
 
-## What it doesn't do yet
+**In three months:** month one is reliability (persistence, the regression suite, a background
+crawler for the benchmark); month two is multimodal (vision over images, nutrition-label OCR,
+alt-text generation); month three is where it starts acting (writing drafts back to Shopify Admin
+behind human approval, scheduled catalogue audits, launch-readiness checks).
+
+The full version is in [docs/roadmap.md](docs/roadmap.md).
+
+## Known limitations
 
 - No vision: it doesn't inspect image content, and it reads the ingredient list but not nutrient quantities.
 - Reviews are aggregate only (count and rating); individual review text isn't pulled in.
