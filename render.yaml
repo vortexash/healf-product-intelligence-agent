@@ -5,10 +5,8 @@ services:
   - type: web
     name: healf-backend
     runtime: docker
-    # Paths are relative to the REPO ROOT. Point both the Dockerfile and its
-    # build context at ./backend so the COPY steps inside the Dockerfile resolve.
+    # Build context defaults to the repo root; the Dockerfile COPYs backend/ paths.
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
     healthCheckPath: /health
     plan: free
     envVars:

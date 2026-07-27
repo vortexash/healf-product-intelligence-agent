@@ -1,0 +1,12 @@
+.git
+node_modules
+**/node_modules
+frontend/.next
+frontend
+docs
+examples
+**/__pycache__
+*.pyc
+.pytest_cache
+**/.env
+*.tsbuildinfo
