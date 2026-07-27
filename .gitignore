@@ -22,20 +22,20 @@ Thumbs.db
 # build artifacts
 frontend/*.tsbuildinfo
 
-# Personal interview-prep notes — do NOT commit
+# Personal interview-prep notes - do NOT commit
 docs/DEMO.md
 docs/CODEBASE_GUIDE.md
 
-# Claude Code / assistant files — do NOT commit
+# Claude Code / assistant files - do NOT commit
 .claude/
 CLAUDE.md
 **/CLAUDE.md
 .claude*
 
-# Assignment brief & PRD — do NOT commit
+# Assignment brief & PRD - do NOT commit
 AI Automation - Assignment.pdf
 Healf_Product_Intelligence_Agent_PRD.md
 PRD.md
 
-# Screenshots placeholder — not committed
+# Screenshots placeholder - not committed
 examples/screenshots/

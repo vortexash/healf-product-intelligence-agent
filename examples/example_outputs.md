@@ -1,4 +1,4 @@
-# Example Outputs — Healf Product Intelligence Agent
+# Example Outputs - Healf Product Intelligence Agent
 
 _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack`). LLM configured: **True**._
 
@@ -8,7 +8,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 > content *rewrite* below are real LLM output grounded only in the extracted product facts. With no
 > LLM key set, those three degrade to a rule-based response instead (the app stays fully usable).
 
-## Scenario 1 — Reviews
+## Scenario 1 - Reviews
 
 **User:** `https://healf.com/en-uk/products/lmnt-recharge-electrolytes-variety-pack ⏎ Does this product have any reviews?`
 
@@ -18,7 +18,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 > **Yes, this product has reviews.** There are **516 reviews**. Average rating: **4.9/5**.
 
-**Limitations:** Only aggregate review data was ingested — individual review text was not.
+**Limitations:** Only aggregate review data was ingested - individual review text was not.
 
 **Evidence (1 fields):**
 
@@ -28,7 +28,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 ---
 
-## Scenario 2 — Ingredient lookup (Vitamin D)
+## Scenario 2 - Ingredient lookup (Vitamin D)
 
 **User:** `Does this product have Vitamin D in it?`
 
@@ -38,7 +38,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 > **Vitamin D is not listed** in the ingredients available on the live page.
 > 
-> (That means it was not found in the published list — not a guarantee the product is free from it.)
+> (That means it was not found in the published list - not a guarantee the product is free from it.)
 > 
 > Ingredient excerpt: “Citrus: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon & Lime Flavors, Stevia Leaf Extract. Raspberry: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Raspberry Flavor, Stevia Leaf Extract. Lemonade: Salt (Sodium Chloride), Citric Acid, Magnesium Malate, Potassium Chloride, Natural Lemon Flavor, Stevia Leaf Extract. Water…”
 
@@ -53,7 +53,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 ---
 
-## Scenario 3 — Ingredient present (Magnesium)
+## Scenario 3 - Ingredient present (Magnesium)
 
 **User:** `Does it contain magnesium?`
 
@@ -61,7 +61,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 **Answer:**
 
-> **Yes — magnesium is listed** in the ingredients.
+> **Yes - magnesium is listed** in the ingredients.
 > 
 > Matched terms: _magnesium, magnesium malate_.
 > 
@@ -78,7 +78,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 ---
 
-## Scenario 4 — Pricing & subscription
+## Scenario 4 - Pricing & subscription
 
 **User:** `Compare one-time and subscription pricing.`
 
@@ -87,7 +87,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 **Answer:**
 
 > **One-time:** £18.99
-> **Subscription:** £17.09 — 10% off
+> **Subscription:** £17.09 - 10% off
 > **Plans:** Delivery every month, Delivery every 2 weeks, Delivery every 3 months, Delivery every 2 months
 
 **Evidence (4 fields):**
@@ -101,7 +101,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 ---
 
-## Scenario 5 — Availability
+## Scenario 5 - Availability
 
 **User:** `Is it in stock?`
 
@@ -120,7 +120,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 ---
 
-## Scenario 6 — Open-ended page evaluation
+## Scenario 6 - Open-ended page evaluation
 
 **User:** `What can I improve on this page?`
 
@@ -133,9 +133,9 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 > **Overall: 89/100** (heuristic).
 > 
 > **Top recommendations:**
-> 1. **Enhance Image Alt Text Coverage** — Add descriptive alt text to the existing images to improve accessibility and search engine performance.
-> 2. **Increase Image Quantity** — Add at least one more image displaying the product in use or its packaging to align with the benchmark.
-> 3. **Add Allergen or Warning Information** — Include a section that outlines potential allergens or warnings related to product consumption.
+> 1. **Enhance Image Alt Text Coverage** - Add descriptive alt text to the existing images to improve accessibility and search engine performance.
+> 2. **Increase Image Quantity** - Add at least one more image displaying the product in use or its packaging to align with the benchmark.
+> 3. **Add Allergen or Warning Information** - Include a section that outlines potential allergens or warnings related to product consumption.
 
 **Limitations:** This is a heuristic evaluation, not an exact score.; Image content was not visually inspected (no vision in the MVP).; Individual review text was not available, limiting insights into specific customer feedback.; The page does not provide a detailed warning section, which could be crucial for users with dietary restrictions.
 
@@ -152,9 +152,9 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 | SEO basics | 100 | strong |
 
 **Top recommendations:**
-- **Enhance Image Alt Text Coverage** — Add descriptive alt text to the existing images to improve accessibility and search engine performance.
-- **Increase Image Quantity** — Add at least one more image displaying the product in use or its packaging to align with the benchmark.
-- **Add Allergen or Warning Information** — Include a section that outlines potential allergens or warnings related to product consumption.
+- **Enhance Image Alt Text Coverage** - Add descriptive alt text to the existing images to improve accessibility and search engine performance.
+- **Increase Image Quantity** - Add at least one more image displaying the product in use or its packaging to align with the benchmark.
+- **Add Allergen or Warning Information** - Include a section that outlines potential allergens or warnings related to product consumption.
 
 **Evidence (27 fields):**
 
@@ -168,7 +168,7 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 ---
 
-## Scenario 7 — Follow-up: rewrite the top section
+## Scenario 7 - Follow-up: rewrite the top section
 
 **User:** `Rewrite the product description.`
 
@@ -176,11 +176,11 @@ _Generated 2026-07-27T12:18:35.979555+00:00 from **live** Healf data (`https://h
 
 **Answer:**
 
-> Here is a draft: **Recharge Electrolytes Variety Pack**. See the draft card below — it lists which facts were used and which claims were deliberately not introduced.
+> Here is a draft: **Recharge Electrolytes Variety Pack**. See the draft card below - it lists which facts were used and which claims were deliberately not introduced.
 
 **Limitations:** Generated from extracted facts only; review before publishing.
 
-**Draft — Recharge Electrolytes Variety Pack:**
+**Draft - Recharge Electrolytes Variety Pack:**
 
 ### Energize Your Day with LMNT Recharge Electrolytes
 

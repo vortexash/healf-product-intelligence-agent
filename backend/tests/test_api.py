@@ -57,7 +57,7 @@ async def test_chat_ingredient_and_followup(source_url):
         assert d1["product"]["title"].startswith("Recharge")
         sid = d1["session_id"]
 
-        # Follow-up WITHOUT the URL — uses session context.
+        # Follow-up WITHOUT the URL - uses session context.
         r2 = await c.post("/api/chat", json={"session_id": sid, "message": "How many reviews does it have?"})
         d2 = r2.json()
     assert d2["answer"]["intent"] == "review_lookup"

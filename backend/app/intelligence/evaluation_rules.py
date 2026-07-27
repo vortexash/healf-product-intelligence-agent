@@ -1,7 +1,7 @@
 """Deterministic evaluation signals + heuristic scorecard (PRD 18).
 
 Produces per-category signals and a weighted overall score. This is a heuristic,
-not exact science — it is labelled as such. The LLM stage consumes these signals.
+not exact science - it is labelled as such. The LLM stage consumes these signals.
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ LABELS = {
 
 
 def compute_signals(p: ProductData) -> dict:
-    """Raw structured signals — also passed to the LLM evaluator."""
+    """Raw structured signals - also passed to the LLM evaluator."""
     desc_words = word_count(p.description_text)
     alt = sum(1 for i in p.images if i.alt_text)
     dup_ratio = 0.0
@@ -200,13 +200,13 @@ def _score_seo(s) -> tuple[int, list[str]]:
     if seo["title"]:
         score += 30
         if not (30 <= seo["title_len"] <= 65):
-            f.append(f"SEO title length ({seo['title_len']}) outside 30–65 chars.")
+            f.append(f"SEO title length ({seo['title_len']}) outside 30-65 chars.")
     else:
         f.append("Missing SEO title.")
     if seo["description"]:
         score += 30
         if not (70 <= seo["desc_len"] <= 160):
-            f.append(f"Meta description length ({seo['desc_len']}) outside 70–160 chars.")
+            f.append(f"Meta description length ({seo['desc_len']}) outside 70-160 chars.")
     else:
         f.append("Missing meta description.")
     if seo["canonical"]:

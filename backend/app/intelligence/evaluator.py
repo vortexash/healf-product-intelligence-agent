@@ -21,7 +21,7 @@ async def evaluate(p: ProductData, question: str) -> ProductEvaluation:
     ]
     if benchmark is None:
         base_limitations.append(
-            "Scored against product-specific checks only — not compared to the wider Healf catalogue."
+            "Scored against product-specific checks only - not compared to the wider Healf catalogue."
         )
 
     if not llm_client.is_configured():

@@ -63,7 +63,7 @@ def answer_ingredient(p: ProductData, term: str | None) -> ChatAnswer:
         pretty = ", ".join(sorted(set(matched)))
         return ChatAnswer(
             text=(
-                f"**Yes — {term} is listed** in the ingredients.\n\n"
+                f"**Yes - {term} is listed** in the ingredients.\n\n"
                 f"Matched terms: _{pretty}_.\n\n"
                 f"Ingredient excerpt: “{excerpt}…”"
             ),
@@ -74,7 +74,7 @@ def answer_ingredient(p: ProductData, term: str | None) -> ChatAnswer:
     return ChatAnswer(
         text=(
             f"**{term} is not listed** in the ingredients available on the live page.\n\n"
-            f"(That means it was not found in the published list — not a guarantee the product "
+            f"(That means it was not found in the published list - not a guarantee the product "
             f"is free from it.)\n\nIngredient excerpt: “{excerpt}…”"
         ),
         intent="ingredient_lookup",
@@ -98,7 +98,7 @@ def answer_reviews(p: ProductData) -> ChatAnswer:
             text=" ".join(bits),
             intent="review_lookup",
             confidence="high",
-            limitations=["Only aggregate review data was ingested — individual review text was not."],
+            limitations=["Only aggregate review data was ingested - individual review text was not."],
         )
     if r.present is False:
         return ChatAnswer(text="This product does not appear to have any reviews on the page.", intent="review_lookup", confidence="medium")
@@ -134,7 +134,7 @@ def answer_subscription(p: ProductData) -> ChatAnswer:
     if p.one_time_price:
         lines.append(f"**One-time:** {p.one_time_price.formatted}")
     if p.subscription_price:
-        save = f" — {p.subscription_savings_percent:.0f}% off" if p.subscription_savings_percent else ""
+        save = f" - {p.subscription_savings_percent:.0f}% off" if p.subscription_savings_percent else ""
         lines.append(f"**Subscription:** {p.subscription_price.formatted}{save}")
     if p.selling_plans:
         names = ", ".join(sp.name for sp in p.selling_plans if sp.name)

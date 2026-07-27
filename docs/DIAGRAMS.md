@@ -16,7 +16,7 @@ Markdown Preview Mermaid extension, and in most Markdown viewers.
 ## 1. System / container overview
 
 The big picture: a browser talking to a FastAPI backend, which talks to two external systems
-(the live Healf site and an LLM provider). No database — state is in memory.
+(the live Healf site and an LLM provider). No database - state is in memory.
 
 ```mermaid
 flowchart LR
@@ -237,7 +237,7 @@ flowchart TD
     MSG --> DRAFT["ContentDraftCard"]
     MSG --> CHIPS["PromptChips (follow-ups)"]
 
-    LIBAPI["lib/api.ts<br/>streamChat() — parses SSE"]
+    LIBAPI["lib/api.ts<br/>streamChat() - parses SSE"]
     SHELL <--> LIBAPI
     LIBAPI <-->|"/api/chat/stream"| BE(["FastAPI backend"])
 ```

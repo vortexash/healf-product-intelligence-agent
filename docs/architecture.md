@@ -2,7 +2,7 @@
 
 Two services: a FastAPI backend (Python 3.12) that does the navigating, ingesting, evaluating and
 answering, and a Next.js frontend (App Router, TypeScript, Tailwind) that's the chat UI and streams
-the responses. State is deliberately ephemeral — in-memory sessions (60 min TTL) and a product cache
+the responses. State is deliberately ephemeral - in-memory sessions (60 min TTL) and a product cache
 (10 min TTL), no database or vector store.
 
 ```mermaid
@@ -36,14 +36,14 @@ everything about how you get the data. What I found poking at live pages:
 
 | What you'd assume (classic Shopify) | What Healf actually does |
 |---|---|
-| `/products/{handle}.js` returns product JSON | Returns the Next.js app HTML — 200 or 404, never JSON |
+| `/products/{handle}.js` returns product JSON | Returns the Next.js app HTML - 200 or 404, never JSON |
 | Product data sits in Liquid-rendered HTML | It's in React Server Component flight payloads (`self.__next_f.push(...)`) |
 | One JSON-LD block, maybe | One JSON-LD `Product` with `aggregateRating` and a few sample reviews |
 | Sections as `<h2>`/`<h3>` headings | Radix UI accordions (`button[aria-controls]` → `div[role=region]`) |
 
 So the flight-JSON parser is the primary source (variants, pricing, selling plans, images, SEO),
 JSON-LD gives reviews and rating, and the HTML accordions give description, ingredients and usage.
-The `.js`/`.json` probe is still there — it does nothing on Healf but would work on a normal Shopify
+The `.js`/`.json` probe is still there - it does nothing on Healf but would work on a normal Shopify
 store, so it's cheap insurance.
 
 ## How the merger picks a value
@@ -56,7 +56,7 @@ shopify_json > embedded_json > json_ld > html > review_widget > derived
 
 With a few per-field exceptions: SEO and canonical prefer the HTML `<meta>` tags, reviews prefer the
 JSON-LD `aggregateRating`, and ingredients/benefits/usage prefer the HTML sections. Images are a
-special case — they get unioned across sources and deduped by canonical URL rather than one source
+special case - they get unioned across sources and deduped by canonical URL rather than one source
 winning. Every field that ends up on the product keeps a `SourceEvidence` record (source, URL,
 excerpt, selector, confidence), and when two sources disagree the merger keeps one value, drops the
 confidence, and adds an extraction warning.
@@ -65,7 +65,7 @@ confidence, and adds an extraction warning.
 
 Anything factual runs without the model: URL validation, all the ingestion, ingredient lookup (with
 an alias map), reviews, price, subscription, availability, image count, and the weighted scorecard.
-The LLM is optional and only handles the open-ended work — the evaluation narrative and ranked
+The LLM is optional and only handles the open-ended work - the evaluation narrative and ranked
 recommendations, summaries, general questions, and content generation. With no key set, evaluation
 and summary fall back to rule-based output and content generation just says it's unavailable.
 

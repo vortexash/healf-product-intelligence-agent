@@ -22,16 +22,16 @@ def post(path, payload):
 def main():
     health = json.loads(urllib.request.urlopen(BASE + "/health").read())
     scenarios = [
-        ("Scenario 1 — Reviews", f"{URL}\nDoes this product have any reviews?", None),
-        ("Scenario 2 — Ingredient lookup (Vitamin D)", "Does this product have Vitamin D in it?", "session"),
-        ("Scenario 3 — Ingredient present (Magnesium)", "Does it contain magnesium?", "session"),
-        ("Scenario 4 — Pricing & subscription", "Compare one-time and subscription pricing.", "session"),
-        ("Scenario 5 — Availability", "Is it in stock?", "session"),
-        ("Scenario 6 — Open-ended page evaluation", "What can I improve on this page?", "session"),
-        ("Scenario 7 — Follow-up: rewrite the top section", "Rewrite the product description.", "session"),
+        ("Scenario 1 - Reviews", f"{URL}\nDoes this product have any reviews?", None),
+        ("Scenario 2 - Ingredient lookup (Vitamin D)", "Does this product have Vitamin D in it?", "session"),
+        ("Scenario 3 - Ingredient present (Magnesium)", "Does it contain magnesium?", "session"),
+        ("Scenario 4 - Pricing & subscription", "Compare one-time and subscription pricing.", "session"),
+        ("Scenario 5 - Availability", "Is it in stock?", "session"),
+        ("Scenario 6 - Open-ended page evaluation", "What can I improve on this page?", "session"),
+        ("Scenario 7 - Follow-up: rewrite the top section", "Rewrite the product description.", "session"),
     ]
 
-    out = ["# Example Outputs — Healf Product Intelligence Agent", ""]
+    out = ["# Example Outputs - Healf Product Intelligence Agent", ""]
     out.append(
         f"_Generated {datetime.now(timezone.utc).isoformat()} from **live** Healf data "
         f"(`{URL}`). LLM configured: **{health['llm_configured']}**._"
@@ -74,11 +74,11 @@ def main():
             out.append("")
             out.append("**Top recommendations:**")
             for r in ev["recommendations"][:3]:
-                out.append(f"- **{r['title']}** — {r['suggested_action']}")
+                out.append(f"- **{r['title']}** - {r['suggested_action']}")
             out.append("")
         if resp.get("content_draft"):
             cd = resp["content_draft"]
-            out.append(f"**Draft — {cd['title']}:**\n")
+            out.append(f"**Draft - {cd['title']}:**\n")
             out.append(cd["content"])
             out.append("")
             if cd.get("claims_not_introduced"):

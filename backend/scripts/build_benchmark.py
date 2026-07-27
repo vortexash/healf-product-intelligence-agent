@@ -2,7 +2,7 @@
 
 Ingests 5-10 live Healf product pages, computes aggregate metrics, and writes
 backend/data/benchmark.json. Non-product / failing URLs are skipped. No values
-are invented — every metric comes from live pages, and sample_size is recorded.
+are invented - every metric comes from live pages, and sample_size is recorded.
 
 Usage:
     python scripts/build_benchmark.py handle1 handle2 ...
@@ -76,7 +76,7 @@ async def main() -> None:
                 headings_counter[name] = headings_counter.get(name, 0) + 1
 
     if len(products) < 3:
-        print(f"Only {len(products)} products ingested — too few for a benchmark. Aborting.")
+        print(f"Only {len(products)} products ingested - too few for a benchmark. Aborting.")
         sys.exit(1)
 
     n = len(products)

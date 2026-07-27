@@ -36,7 +36,7 @@ class Settings(BaseModel):
 
         Honors LLM_PROVIDER (case-insensitive) when that provider's key is set;
         otherwise infers from whichever key IS present. This means setting just
-        OPENAI_API_KEY (or just ANTHROPIC_API_KEY) is enough — no need to also
+        OPENAI_API_KEY (or just ANTHROPIC_API_KEY) is enough - no need to also
         remember LLM_PROVIDER.
         """
         p = (self.llm_provider or "").strip().lower()

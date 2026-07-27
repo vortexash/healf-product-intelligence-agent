@@ -3,7 +3,7 @@
 A chat agent that answers questions about Healf product pages using live data from the site. You
 paste a product URL, ask something in plain English ("does this have vitamin D?", "what's weak about
 this page?", "rewrite the description"), and it fetches the page, pulls out what it needs, and
-answers you — with the source for each fact, and follow-ups don't need the URL again.
+answers you - with the source for each fact, and follow-ups don't need the URL again.
 
 Live demo: https://healf-product-intelligence-agent.vercel.app
 
@@ -32,8 +32,8 @@ chat UI (Next.js) -> FastAPI -> validate URL + SSRF check -> fetch the live page
 ### Getting data out of Healf
 
 This is the part that took the most digging. Healf runs on Shopify, but it's a headless Next.js
-frontend rather than a classic Liquid theme, so the obvious move — hitting `/products/{handle}.json`
-— doesn't work. Those URLs just return the app's HTML. The real product data is spread across three
+frontend rather than a classic Liquid theme, so the obvious move - hitting `/products/{handle}.json`
+- doesn't work. Those URLs just return the app's HTML. The real product data is spread across three
 places, and I parse all of them:
 
 - The Shopify product object is embedded in the page's React Server Component payloads
@@ -42,7 +42,7 @@ places, and I parse all of them:
 - A JSON-LD `Product` block carries the review count and rating.
 - The description, ingredients and usage instructions live inside Radix accordions in the HTML.
 
-Each parser returns a fragment plus evidence — which source it came from, an excerpt, a confidence.
+Each parser returns a fragment plus evidence - which source it came from, an excerpt, a confidence.
 A merger combines them using a precedence order and records any conflicts, so every field on the
 final product can be traced back to where it came from (that's what the evidence drawer in the UI
 shows). The old `.json` probe is still in there; it just no-ops on Healf and would work on a normal
@@ -50,7 +50,7 @@ Shopify store.
 
 ### Deterministic vs LLM
 
-Facts don't go through the model. Ingredient lookups, reviews, price, availability, image counts —
+Facts don't go through the model. Ingredient lookups, reviews, price, availability, image counts -
 those are answered straight from the parsed data. The LLM only handles open-ended work: page
 evaluation, prioritising fixes, summaries, and writing (rewrites, FAQ, SEO). And it never sees raw
 HTML, only a trimmed dict of extracted facts, so it can't invent a price or an ingredient.
@@ -58,7 +58,7 @@ HTML, only a trimmed dict of extracted facts, so it can't invent a price or an i
 Two grounding details I cared about:
 
 - Ingredient answers distinguish present / not listed / unknown. If vitamin D isn't in the list it
-  says "not listed on the live page", not "this product doesn't contain it" — those aren't the same
+  says "not listed on the live page", not "this product doesn't contain it" - those aren't the same
   claim, and the page might just be incomplete.
 - The page score is a weighted heuristic, and it's labelled as one. The signals are computed in
   code; the LLM writes the narrative and ranks the recommendations on top of them.
@@ -66,7 +66,7 @@ Two grounding details I cared about:
 ### Site context
 
 Evaluations are more useful when they know what "good" looks like across Healf. `scripts/build_benchmark.py`
-samples a handful of live products into `backend/data/benchmark.json` — median description length,
+samples a handful of live products into `backend/data/benchmark.json` - median description length,
 image count, alt-text coverage, how often ingredients/reviews/subscriptions show up. The evaluator
 passes that to the LLM, so a recommendation can say "add another image to match the ~4 that
 comparable pages have" instead of a generic "add more images". If the file isn't there, evaluation
@@ -97,7 +97,7 @@ npm run dev
 
 Then open http://localhost:3000. Or `docker compose up --build` to run both at once.
 
-Factual questions work with no API key. Evaluation and content generation need one — set either
+Factual questions work with no API key. Evaluation and content generation need one - set either
 `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` and it picks the provider from whichever key is present.
 
 ## The API
@@ -132,20 +132,20 @@ you can see output without running anything.
 - State is in-memory, so sessions and the product cache reset on restart. The sidebar's recent chats
   are just localStorage.
 - Extraction depends on Healf's current markup. If they change the flight-data format it'll need
-  updating — a regression suite over saved pages is the first thing I'd add.
+  updating - a regression suite over saved pages is the first thing I'd add.
 
 ## Where I'd take it next
 
 Three I'd prioritise:
 
 1. Upsell / cross-sell. Right now it evaluates one page; the natural next capability is recommending
-   what to sell alongside it — complementary products, the subscription upsell (with the real saving
-   it already extracts), bundles — grounded in a catalogue index so the SKUs are real, not invented.
+   what to sell alongside it - complementary products, the subscription upsell (with the real saving
+   it already extracts), bundles - grounded in a catalogue index so the SKUs are real, not invented.
 2. Real persistence. Postgres for sessions, history and product snapshots (so answers are
    reproducible and you can diff a page over time), Redis for caching and rate limits. That's also
    what makes catalogue-wide audits possible.
 3. A feedback loop. Capture thumbs up/down and which recommendations actually got applied, turn that
-   into an eval set, and tune the rubric weights and prompts against it — without letting the
+   into an eval set, and tune the rubric weights and prompts against it - without letting the
    grounding rules get tuned away.
 
 The longer version, plus the production hardening (auth, rate limiting, observability, content
@@ -167,4 +167,4 @@ frontend/
 
 Stack is FastAPI + httpx + BeautifulSoup/lxml + Pydantic v2 on the backend, and Next.js (App
 Router) + TypeScript + Tailwind on the frontend. The UI primitives are hand-written rather than
-pulled from a component library — there are only five of them, so it wasn't worth the dependency.
+pulled from a component library - there are only five of them, so it wasn't worth the dependency.

@@ -1,5 +1,5 @@
 # Render blueprint for the FastAPI backend (monorepo: backend lives in ./backend).
-# Uses Render's NATIVE PYTHON runtime (not Docker) — simplest + most reliable for a
+# Uses Render's NATIVE PYTHON runtime (not Docker) - simplest + most reliable for a
 # monorepo: rootDir points at ./backend so requirements.txt and app/ resolve directly.
 # In the dashboard: New + > Blueprint > this repo, then set the secret OPENAI_API_KEY.
 services:

@@ -4,7 +4,7 @@ Healf is a headless Next.js storefront. The rich structured product data ships
 inside React Server Component flight payloads: `self.__next_f.push([1,"..."])`.
 We decode those string literals, concatenate the stream, locate the
 `"product":{...}` object, and map the Shopify Storefront GraphQL shape.
-(PRD 14.4 — embedded storefront JSON.)
+(PRD 14.4 - embedded storefront JSON.)
 """
 from __future__ import annotations
 

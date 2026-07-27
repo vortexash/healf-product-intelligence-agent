@@ -89,7 +89,7 @@ async def _handle_evaluation(product, message, intent, out: Composed) -> None:
     if top:
         lines.append("\n**Top recommendations:**")
         for r in top:
-            lines.append(f"{r.priority}. **{r.title}** — {r.suggested_action}")
+            lines.append(f"{r.priority}. **{r.title}** - {r.suggested_action}")
     conf = "medium" if ev.provisional else "high"
     out.answer = ChatAnswer(text="\n".join(lines), intent=intent, confidence=conf, limitations=ev.limitations)
     out.evidence = product.evidence
@@ -107,7 +107,7 @@ async def _handle_content(product, message, intent, out: Composed) -> None:
     draft = await content_generator.generate(product, intent, message)
     out.content_draft = draft
     out.answer = ChatAnswer(
-        text=f"Here is a draft: **{draft.title}**. See the draft card below — it lists which facts were used and which claims were deliberately not introduced.",
+        text=f"Here is a draft: **{draft.title}**. See the draft card below - it lists which facts were used and which claims were deliberately not introduced.",
         intent=intent,
         confidence="medium",
         limitations=["Generated from extracted facts only; review before publishing."],

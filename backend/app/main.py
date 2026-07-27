@@ -1,4 +1,4 @@
-"""FastAPI application — health, product fetch, chat, streaming chat (PRD 21)."""
+"""FastAPI application - health, product fetch, chat, streaming chat (PRD 21)."""
 from __future__ import annotations
 
 import json
