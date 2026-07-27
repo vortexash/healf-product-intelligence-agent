@@ -8,9 +8,18 @@ questions reuse the same product, so you never paste the URL twice.
 _(The backend runs on a free tier that sleeps when idle, so the first request takes 30-60s to wake
 up, then it's fast.)_
 
-**Jump to:** [Capabilities](#the-four-capabilities) · [What you can ask](#what-you-can-ask) ·
-[How it works](#how-it-works) · [Quick start](#quick-start) · [API](#the-api) · [Tests](#tests) ·
-[Roadmap](#whats-next) · [Layout](#project-layout)
+## Contents
+
+- [The four capabilities](#the-four-capabilities)
+- [What you can ask](#what-you-can-ask)
+- [How this meets the brief](#how-this-meets-the-brief)
+- [How it works](#how-it-works)
+- [Quick start](#quick-start)
+- [The API](#the-api)
+- [Tests](#tests)
+- [What's next](#whats-next)
+- [Known limitations](#known-limitations)
+- [Project layout](#project-layout)
 
 ## The four capabilities
 
