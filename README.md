@@ -5,6 +5,7 @@ English, and get an answer grounded in the live page, with a source for every fa
 questions reuse the same product, so you never paste the URL twice.
 
 **Live demo:** https://healf-product-intelligence-agent.vercel.app
+**Walkthrough video:** https://www.loom.com/share/c2abfadb87cb49c6827e10884e086505
 _(The backend runs on a free tier that sleeps when idle, so the first request takes 30-60s to wake
 up, then it's fast.)_
 
