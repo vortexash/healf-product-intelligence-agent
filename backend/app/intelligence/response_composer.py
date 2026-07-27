@@ -15,22 +15,40 @@ from .intent_router import IntentResult, classify
 from .llm_payload import product_facts
 from ..prompts import evaluator as eval_prompt
 
-SUGGESTED = {
-    "ingredient_lookup": ["Show all ingredients", "Check another nutrient", "Evaluate this page"],
-    "review_lookup": ["What is the rating?", "Summarize the product", "What can I improve?"],
-    "price_lookup": ["Compare one-time vs subscription", "Is it in stock?", "Rewrite the description"],
-    "subscription_lookup": ["What is the one-time price?", "Evaluate this page", "Summarize the product"],
-    "availability_lookup": ["What is the price?", "Show reviews", "Summarize the product"],
-    "image_evaluation": ["What can I improve?", "Are alt texts good?", "Evaluate this page"],
-    "page_evaluation": ["Rewrite the description", "Create a better FAQ", "Improve the SEO"],
-    "seo_evaluation": ["Rewrite the description", "What else can I improve?", "Create an FAQ"],
-    "content_rewrite": ["Create a FAQ", "Improve the SEO title", "Evaluate this page"],
-    "faq_generation": ["Rewrite the description", "Improve the SEO", "What can I improve?"],
-    "product_summary": ["Does it have reviews?", "Check the ingredients", "What can I improve?"],
-    "general_product_question": ["Summarize the product", "Check the ingredients", "What can I improve?"],
-}
-
-_DEFAULT_SUGGESTED = ["Summarize the product", "Check the ingredients", "What can I improve?"]
+def suggest_follow_ups(product: ProductData, intent: str) -> list[str]:
+    """Build follow-up prompts from what THIS product actually has, skipping
+    whatever the user just asked. Deterministic and grounded (no LLM call)."""
+    candidates: list[tuple[str, bool]] = [
+        # (prompt, is-relevant-for-this-product-and-not-the-current-intent)
+        ("What can I improve on this page?", intent != "page_evaluation"),
+        (
+            "Check the ingredients" if intent != "ingredient_lookup" else "Check another nutrient",
+            bool(product.ingredients_raw or product.ingredient_groups),
+        ),
+        (
+            "Compare one-time vs subscription pricing",
+            bool(product.subscription_price) and intent not in ("subscription_lookup", "price_lookup"),
+        ),
+        ("What is the rating?", bool(product.reviews.present) and intent != "review_lookup"),
+        ("Does it have reviews?", product.reviews.present is None and intent != "review_lookup"),
+        ("Rewrite the description", bool(product.description_text) and intent != "content_rewrite"),
+        ("Create a better FAQ", intent != "faq_generation"),
+        ("Are the images good enough?", bool(product.images) and intent != "image_evaluation"),
+        ("Improve the SEO title and meta description", intent != "seo_evaluation"),
+        ("Is it in stock?", product.available is not None and intent != "availability_lookup"),
+        ("Summarize the product", intent != "product_summary"),
+    ]
+    picks = [prompt for prompt, ok in candidates if ok]
+    # De-dupe while preserving order, keep the top three.
+    seen: set[str] = set()
+    out: list[str] = []
+    for p in picks:
+        if p not in seen:
+            seen.add(p)
+            out.append(p)
+        if len(out) == 3:
+            break
+    return out
 
 
 class Composed:
@@ -51,7 +69,7 @@ def _evidence_for(product: ProductData, fields: list[str]) -> list[SourceEvidenc
 async def compose(product: ProductData, message: str) -> Composed:
     intent = classify(message)
     out = Composed()
-    out.suggested_actions = SUGGESTED.get(intent.intent, _DEFAULT_SUGGESTED)
+    out.suggested_actions = suggest_follow_ups(product, intent.intent)
 
     i = intent.intent
     if i == "ingredient_lookup":
