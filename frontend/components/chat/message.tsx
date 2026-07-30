@@ -42,7 +42,7 @@ export function Message({ m, onFollowUp }: { m: ThreadMessage; onFollowUp: (prom
           {m.showProductCard && m.product && <ProductCard product={m.product} />}
 
           {m.text && (
-            <div className="rounded-xl3 rounded-tl-md border border-line bg-card px-4 py-3.5 shadow-soft sm:px-5">
+            <div className="py-1 pr-2 sm:pr-6">
               <div className="prose-chat text-[15px] text-ink">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
                 {m.streaming && (
@@ -51,11 +51,13 @@ export function Message({ m, onFollowUp }: { m: ThreadMessage; onFollowUp: (prom
               </div>
 
               {m.answer?.limitations && m.answer.limitations.length > 0 && !m.streaming && (
-                <ul className="mt-2 space-y-0.5 text-xs text-muted">
+                <div className="mt-3 space-y-1 text-xs leading-relaxed text-muted">
                   {m.answer.limitations.map((l, i) => (
-                    <li key={i}>· {l}</li>
+                    <p key={i}>
+                      <span className="font-medium">Note:</span> {l}
+                    </p>
                   ))}
-                </ul>
+                </div>
               )}
 
               {m.evidence && m.evidence.length > 0 && !m.streaming && <Citations evidence={m.evidence} />}

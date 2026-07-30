@@ -118,4 +118,27 @@ describe("Message", () => {
     expect(screen.queryByText(/confidence/i)).toBeNull();
     expect(screen.queryByText(/ingredient lookup/i)).toBeNull();
   });
+
+  it("renders assistant replies as open chat text and labels real caveats as notes", () => {
+    const { container } = render(
+      <Message
+        m={{
+          id: "3",
+          role: "assistant",
+          text: "Here is the answer.",
+          answer: {
+            text: "Here is the answer.",
+            intent: "review_lookup",
+            confidence: "high",
+            limitations: ["Written review text is unavailable."],
+          },
+        }}
+        onFollowUp={() => {}}
+      />,
+    );
+    expect(screen.getByText("Here is the answer.")).toBeInTheDocument();
+    expect(screen.getByText(/Written review text is unavailable/)).toBeInTheDocument();
+    expect(screen.getByText("Note:")).toBeInTheDocument();
+    expect(container.querySelector(".border-line.bg-card.shadow-soft")).toBeNull();
+  });
 });

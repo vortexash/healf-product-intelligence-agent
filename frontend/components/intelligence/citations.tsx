@@ -11,7 +11,7 @@ export function Citations({ evidence }: { evidence: SourceEvidence[] }) {
   const url = evidence[0].source_url;
 
   return (
-    <div className="mt-3 border-t border-line pt-2">
+    <div className="mt-3">
       <a
         href={url}
         target="_blank"

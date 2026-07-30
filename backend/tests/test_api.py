@@ -65,20 +65,57 @@ async def test_chat_ingredient_and_followup(source_url):
     assert d2["product"]["title"].startswith("Recharge")
 
 
-async def test_chat_individual_review_request_is_honest(source_url):
+async def test_chat_review_requests_are_conversational(source_url):
     async with await _client() as c:
-        r = await c.post(
+        first = await c.post(
             "/api/chat",
             json={"message": f"{source_url}\npull any one review"},
         )
-    data = r.json()
-    assert r.status_code == 200
+        data = first.json()
+        sid = data["session_id"]
+        three = await c.post(
+            "/api/chat",
+            json={"session_id": sid, "message": "give 3 reviews"},
+        )
+        another = await c.post(
+            "/api/chat",
+            json={"session_id": sid, "message": "another one"},
+        )
+        next_one = await c.post(
+            "/api/chat",
+            json={"session_id": sid, "message": "next"},
+        )
+
+    assert first.status_code == 200
     assert data["answer"]["intent"] == "review_lookup"
-    assert "published customer-review excerpt" in data["answer"]["text"].lower()
+    assert "sure - here's one" in data["answer"]["text"].lower()
     assert "Taste is great- No junk in the ingredients." in data["answer"]["text"]
+    assert data["answer"]["limitations"] == []
     assert data["product"]["reviews"]["full_review_text_ingested"] is True
     assert len(data["product"]["reviews"]["items"]) == 10
     assert len(data["evidence"]) == 2
+    assert data["suggested_actions"] == [
+        "Show me 3 reviews",
+        "Show the latest review",
+        "What is the average rating?",
+    ]
+
+    three_data = three.json()
+    assert three.status_code == 200
+    assert "here are 3 reviews" in three_data["answer"]["text"].lower()
+    assert three_data["answer"]["text"].count('> "') == 3
+    assert "Taste is great- No junk in the ingredients." not in three_data["answer"]["text"]
+    assert three_data["answer"]["limitations"] == []
+
+    another_data = another.json()
+    assert another.status_code == 200
+    assert another_data["answer"]["intent"] == "review_lookup"
+    assert "sure - here's one" in another_data["answer"]["text"].lower()
+
+    next_data = next_one.json()
+    assert next_one.status_code == 200
+    assert next_data["answer"]["intent"] == "review_lookup"
+    assert "sure - here's one" in next_data["answer"]["text"].lower()
 
 
 async def test_no_active_product_error():

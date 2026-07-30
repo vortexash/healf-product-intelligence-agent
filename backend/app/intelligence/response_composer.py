@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from ..models import (
     ChatAnswer,
@@ -15,11 +16,33 @@ from .intent_router import IntentResult, classify
 from .llm_payload import product_facts
 from ..prompts import evaluator as eval_prompt
 
+_CONTEXTUAL_REVIEW_FOLLOWUP = re.compile(
+    r"^\s*(another(?:\s+one)?|one\s+more|next(?:\s+one)?|more)\s*[?.!]*\s*$",
+    re.IGNORECASE,
+)
+
+
+def _continues_review_conversation(prior_user_messages: list[str]) -> bool:
+    """Recognize a review request followed by any number of short follow-ups."""
+    for prior in reversed(prior_user_messages):
+        if classify(prior).intent == "review_lookup":
+            return True
+        if not _CONTEXTUAL_REVIEW_FOLLOWUP.match(prior):
+            return False
+    return False
+
+
 def suggest_follow_ups(
     product: ProductData, current_intent: str, asked_intents: frozenset[str] = frozenset()
 ) -> list[str]:
     """Build follow-up prompts from what THIS product actually has, skipping any
     action already asked earlier in the conversation. Deterministic, no LLM call."""
+    if current_intent == "review_lookup" and product.reviews.items:
+        return [
+            "Show me 3 reviews",
+            "Show the latest review",
+            "What is the average rating?",
+        ]
     done = set(asked_intents) | {current_intent}
     # (prompt, the intent it maps to, is-it-relevant-for-this-product)
     candidates: list[tuple[str, str, bool]] = [
@@ -62,6 +85,17 @@ def _evidence_for(product: ProductData, fields: list[str]) -> list[SourceEvidenc
 
 async def compose(product: ProductData, message: str, prior_user_messages: list[str] | None = None) -> Composed:
     intent = classify(message)
+    if (
+        intent.intent == "general_product_question"
+        and _CONTEXTUAL_REVIEW_FOLLOWUP.match(message)
+        and prior_user_messages
+        and _continues_review_conversation(prior_user_messages)
+    ):
+        intent = IntentResult(
+            intent="review_lookup",
+            requires_llm=False,
+            confidence=0.95,
+        )
     out = Composed()
     asked = frozenset(classify(m).intent for m in (prior_user_messages or []))
     out.suggested_actions = suggest_follow_ups(product, intent.intent, asked)
@@ -71,7 +105,7 @@ async def compose(product: ProductData, message: str, prior_user_messages: list[
         out.answer = fa.answer_ingredient(product, intent.target_entity, message)
         out.evidence = _evidence_for(product, ["ingredients_raw", "ingredient_groups"])
     elif i == "review_lookup":
-        out.answer = fa.answer_reviews(product, message)
+        out.answer = fa.answer_reviews(product, message, prior_user_messages)
         out.evidence = _evidence_for(product, ["reviews"])
     elif i == "price_lookup":
         out.answer = fa.answer_price(product)

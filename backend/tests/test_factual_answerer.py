@@ -77,12 +77,40 @@ def test_individual_review_request_returns_real_embedded_review():
         )
     )
     a = fa.answer_reviews(p, "pull any one review")
-    assert "published customer-review excerpt" in a.text.lower()
+    assert "sure - here's one" in a.text.lower()
     assert "Taste is great- No junk in the ingredients." in a.text
     assert "Zann B." in a.text
     assert "5/5" in a.text
     assert "Verified buyer" in a.text
     assert "can't pull" not in a.text.lower()
+    assert a.limitations == []
+
+
+def test_review_quantity_and_followup_continue_without_repeating():
+    reviews = [
+        ProductReview(id=str(index), content=f"Review number {index}.", rating=5)
+        for index in range(1, 6)
+    ]
+    p = _product(
+        reviews=ReviewSummary(
+            present=True,
+            count=5,
+            average_rating=5,
+            full_review_text_ingested=True,
+            items=reviews,
+        )
+    )
+
+    first = fa.answer_reviews(p, "give 3 reviews")
+    assert "here are 3 reviews" in first.text.lower()
+    assert "Review number 1." in first.text
+    assert "Review number 2." in first.text
+    assert "Review number 3." in first.text
+    assert "Review number 4." not in first.text
+
+    followup = fa.answer_reviews(p, "another one", ["give 3 reviews"])
+    assert "Review number 4." in followup.text
+    assert "Review number 1." not in followup.text
 
 
 def test_individual_review_markdown_is_escaped():
@@ -106,7 +134,7 @@ def test_individual_review_markdown_is_escaped():
 def test_rating_question_still_returns_aggregate_answer():
     p = _product(reviews=ReviewSummary(present=True, count=522, average_rating=4.9))
     a = fa.answer_reviews(p, "What is the rating?")
-    assert a.text.startswith("**Yes, this product has reviews.**")
+    assert a.text.startswith("It has")
     assert "522" in a.text and "4.9" in a.text
 
 
