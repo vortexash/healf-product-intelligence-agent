@@ -71,7 +71,7 @@ async def compose(product: ProductData, message: str, prior_user_messages: list[
         out.answer = fa.answer_ingredient(product, intent.target_entity, message)
         out.evidence = _evidence_for(product, ["ingredients_raw", "ingredient_groups"])
     elif i == "review_lookup":
-        out.answer = fa.answer_reviews(product)
+        out.answer = fa.answer_reviews(product, message)
         out.evidence = _evidence_for(product, ["reviews"])
     elif i == "price_lookup":
         out.answer = fa.answer_price(product)

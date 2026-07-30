@@ -65,6 +65,20 @@ async def test_chat_ingredient_and_followup(source_url):
     assert d2["product"]["title"].startswith("Recharge")
 
 
+async def test_chat_individual_review_request_is_honest(source_url):
+    async with await _client() as c:
+        r = await c.post(
+            "/api/chat",
+            json={"message": f"{source_url}\npull any one review"},
+        )
+    data = r.json()
+    assert r.status_code == 200
+    assert data["answer"]["intent"] == "review_lookup"
+    assert "can't pull an individual written review" in data["answer"]["text"].lower()
+    assert "won't generate or paraphrase" in data["answer"]["text"].lower()
+    assert len(data["evidence"]) == 1
+
+
 async def test_no_active_product_error():
     async with await _client() as c:
         r = await c.post("/api/chat", json={"message": "What can I improve?"})

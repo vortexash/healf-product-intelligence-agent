@@ -48,6 +48,23 @@ def test_reviews_present():
     assert any("individual review" in l.lower() for l in a.limitations)
 
 
+def test_individual_review_request_is_honest_and_does_not_repeat_aggregate_answer():
+    p = _product(reviews=ReviewSummary(present=True, count=522, average_rating=4.9))
+    a = fa.answer_reviews(p, "pull any one review")
+    assert "can't pull an individual written review" in a.text.lower()
+    assert "does not expose the customer review text" in a.text.lower()
+    assert "won't generate or paraphrase" in a.text.lower()
+    assert "522" in a.text and "4.9" in a.text
+    assert not a.text.startswith("**Yes, this product has reviews.**")
+
+
+def test_rating_question_still_returns_aggregate_answer():
+    p = _product(reviews=ReviewSummary(present=True, count=522, average_rating=4.9))
+    a = fa.answer_reviews(p, "What is the rating?")
+    assert a.text.startswith("**Yes, this product has reviews.**")
+    assert "522" in a.text and "4.9" in a.text
+
+
 def test_reviews_unknown():
     p = _product(reviews=ReviewSummary())
     a = fa.answer_reviews(p)

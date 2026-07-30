@@ -130,8 +130,43 @@ def answer_ingredient(p: ProductData, term: str | None, message: str = "") -> Ch
     )
 
 
-def answer_reviews(p: ProductData) -> ChatAnswer:
+_INDIVIDUAL_REVIEW_RE = re.compile(
+    r"\b(pull|quote|show|read|give me|find)\b.*\b(review|testimonial|comment)\b"
+    r"|\b(any one|one|single|individual|specific|sample|latest|recent|first)\s+"
+    r"(customer\s+)?(review|testimonial|comment)\b"
+    r"|\b(review|testimonial)\s+(text|body|quote)\b",
+    re.IGNORECASE,
+)
+
+
+def _wants_individual_review(message: str) -> bool:
+    return bool(_INDIVIDUAL_REVIEW_RE.search(message or ""))
+
+
+def answer_reviews(p: ProductData, message: str = "") -> ChatAnswer:
     r = p.reviews
+    if _wants_individual_review(message):
+        details: list[str] = []
+        if r.count is not None:
+            details.append(f"**{r.count:,} reviews**")
+        if r.average_rating is not None:
+            details.append(f"an average rating of **{r.average_rating}/5**")
+        aggregate = " and ".join(details)
+        context = f" The page exposes {aggregate}," if aggregate else ""
+        return ChatAnswer(
+            text=(
+                "I can't pull an individual written review from the public product data available "
+                f"to this agent.{context} but it does not expose the customer review text. "
+                "I won't generate or paraphrase a review that I cannot verify.\n\n"
+                "Open the live Healf product page from the source link below to read the published "
+                "customer comments."
+            ),
+            intent="review_lookup",
+            confidence="high",
+            limitations=[
+                "Only aggregate review data was ingested; individual review text is unavailable."
+            ],
+        )
     if r.present and (r.count or r.average_rating):
         bits = ["**Yes, this product has reviews.**"]
         if r.count is not None:
