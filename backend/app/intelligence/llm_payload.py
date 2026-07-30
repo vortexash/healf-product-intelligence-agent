@@ -6,6 +6,22 @@ from ..utilities import excerpt
 
 
 def product_facts(p: ProductData) -> dict:
+    review_facts = {
+        "present": p.reviews.present,
+        "count": p.reviews.count,
+        "average_rating": p.reviews.average_rating,
+        "provider": p.reviews.provider,
+        "full_review_text_ingested": p.reviews.full_review_text_ingested,
+        "sample_reviews": [
+            {
+                "content": excerpt(review.content, 300),
+                "rating": review.rating,
+                "author": review.author,
+                "verified_buyer": review.verified_buyer,
+            }
+            for review in p.reviews.items[:3]
+        ],
+    }
     return {
         "title": p.title,
         "vendor": p.vendor,
@@ -21,7 +37,7 @@ def product_facts(p: ProductData) -> dict:
         "subscription_savings_percent": p.subscription_savings_percent,
         "available": p.available,
         "variants": [v.title for v in p.variants if v.title],
-        "reviews": p.reviews.model_dump(),
+        "reviews": review_facts,
         "image_count": len(p.images),
         "image_alt_coverage": round(sum(1 for i in p.images if i.alt_text) / len(p.images), 2) if p.images else 0,
         "seo_title": p.seo.title,

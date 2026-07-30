@@ -74,9 +74,11 @@ async def test_chat_individual_review_request_is_honest(source_url):
     data = r.json()
     assert r.status_code == 200
     assert data["answer"]["intent"] == "review_lookup"
-    assert "can't pull an individual written review" in data["answer"]["text"].lower()
-    assert "won't generate or paraphrase" in data["answer"]["text"].lower()
-    assert len(data["evidence"]) == 1
+    assert "published customer-review excerpt" in data["answer"]["text"].lower()
+    assert "Taste is great- No junk in the ingredients." in data["answer"]["text"]
+    assert data["product"]["reviews"]["full_review_text_ingested"] is True
+    assert len(data["product"]["reviews"]["items"]) == 10
+    assert len(data["evidence"]) == 2
 
 
 async def test_no_active_product_error():

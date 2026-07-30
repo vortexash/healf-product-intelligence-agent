@@ -11,7 +11,15 @@ from __future__ import annotations
 import json
 import re
 
-from ..models import Money, ProductImage, ProductVariant, SellingPlan, SeoData
+from ..models import (
+    Money,
+    ProductImage,
+    ProductReview,
+    ProductVariant,
+    ReviewSummary,
+    SellingPlan,
+    SeoData,
+)
 from ..utilities import excerpt, make_money
 from .base import Fragment
 
@@ -55,6 +63,32 @@ def _extract_object(s: str, brace_start: int) -> str | None:
     return None
 
 
+def _extract_array(s: str, bracket_start: int) -> str | None:
+    """Return the balanced [...] JSON array beginning at bracket_start."""
+    depth = 0
+    instr = False
+    esc = False
+    for i in range(bracket_start, len(s)):
+        c = s[i]
+        if instr:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                instr = False
+        else:
+            if c == '"':
+                instr = True
+            elif c == "[":
+                depth += 1
+            elif c == "]":
+                depth -= 1
+                if depth == 0:
+                    return s[bracket_start : i + 1]
+    return None
+
+
 def find_product_object(html: str) -> dict | None:
     stream = decode_flight_stream(html)
     key = '"product":{'
@@ -71,6 +105,66 @@ def find_product_object(html: str) -> dict | None:
                 return obj
         idx = stream.find(key, idx + 1)
     return None
+
+
+def find_yotpo_reviews(html: str) -> list[ProductReview]:
+    """Extract public Yotpo review bodies embedded in the RSC flight payload."""
+    stream = decode_flight_stream(html)
+    key = '"reviews":['
+    idx = stream.find(key)
+    best: list[ProductReview] = []
+
+    while idx != -1:
+        bracket = idx + len(key) - 1
+        raw = _extract_array(stream, bracket)
+        parsed = None
+        if raw:
+            try:
+                parsed = json.loads(raw)
+            except (ValueError, TypeError):
+                parsed = None
+
+        reviews: list[ProductReview] = []
+        if isinstance(parsed, list):
+            for item in parsed:
+                if not isinstance(item, dict) or not isinstance(item.get("content"), str):
+                    continue
+                content = item["content"].strip()
+                if not content or not isinstance(item.get("user"), dict):
+                    continue
+                score = item.get("score")
+                try:
+                    rating = float(score) if score is not None else None
+                except (ValueError, TypeError):
+                    rating = None
+                images = [
+                    str(image.get("original_url") or image.get("thumb_url"))
+                    for image in (item.get("images_data") or [])
+                    if isinstance(image, dict)
+                    and (image.get("original_url") or image.get("thumb_url"))
+                ]
+                try:
+                    reviews.append(
+                        ProductReview(
+                            id=str(item.get("id")) if item.get("id") is not None else None,
+                            title=str(item.get("title")) if item.get("title") else None,
+                            content=content,
+                            rating=rating,
+                            author=item["user"].get("display_name"),
+                            created_at=item.get("created_at"),
+                            verified_buyer=item.get("verified_buyer"),
+                            votes_up=item.get("votes_up"),
+                            votes_down=item.get("votes_down"),
+                            images=images,
+                        )
+                    )
+                except (ValueError, TypeError):
+                    continue
+        if len(reviews) > len(best):
+            best = reviews
+        idx = stream.find(key, idx + 1)
+
+    return best
 
 
 def _edges(node) -> list:
@@ -123,6 +217,21 @@ def _subscription(product: dict, one_time: Money | None) -> tuple[list[SellingPl
 def parse(html: str, source_url: str, url_variant_id: str | None = None) -> Fragment:
     frag = Fragment(source_type="embedded_json")
     product = find_product_object(html)
+    reviews = find_yotpo_reviews(html)
+    if reviews:
+        frag.set(
+            "reviews",
+            ReviewSummary(
+                present=True,
+                provider="yotpo",
+                full_review_text_ingested=True,
+                items=reviews,
+            ),
+            source_url,
+            f"{len(reviews)} written review(s) embedded by Yotpo",
+            selector="self.__next_f.push(...) reviews",
+            confidence=0.9,
+        )
     if not product:
         return frag
 

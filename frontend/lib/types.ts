@@ -27,12 +27,26 @@ export interface ProductVariant {
   options?: Record<string, string>;
 }
 
+export interface ProductReview {
+  id?: string | null;
+  title?: string | null;
+  content: string;
+  rating?: number | null;
+  author?: string | null;
+  created_at?: string | null;
+  verified_buyer?: boolean | null;
+  votes_up?: number | null;
+  votes_down?: number | null;
+  images: string[];
+}
+
 export interface ReviewSummary {
   present?: boolean | null;
   count?: number | null;
   average_rating?: number | null;
   provider?: string | null;
   full_review_text_ingested?: boolean;
+  items?: ProductReview[];
 }
 
 export interface SeoData {

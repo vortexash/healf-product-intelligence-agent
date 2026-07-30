@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from app.intelligence import evaluator
-from app.models import ProductData, ReviewSummary, SourceEvidence
+from app.models import ProductData, ProductReview, ReviewSummary, SourceEvidence
 
 
 def _product(*, description: str = "An electrolyte variety pack.") -> ProductData:
@@ -166,3 +166,41 @@ async def test_review_count_in_rationale_does_not_replace_unrelated_action(monke
 
     assert result.recommendations[0].title == "Expand the product description"
     assert result.recommendations[0].suggested_action == "Add verified preparation and usage details."
+
+
+async def test_review_recommendation_uses_ingested_quote_not_generated_copy(monkeypatch):
+    monkeypatch.setattr("app.intelligence.llm_client.is_configured", lambda: True)
+    monkeypatch.setattr("app.intelligence.evaluator.load_benchmark", lambda: None)
+
+    async def response_with_fake_quote(system, user, **kwargs):
+        return {
+            "summary": "The product has strong aggregate review evidence.",
+            "recommendations": [
+                {
+                    "priority": 1,
+                    "title": "Feature a customer review",
+                    "rationale": "Social proof can help shoppers.",
+                    "suggested_action": "Add: 'This completely changed my workouts.'",
+                    "evidence_fields": ["reviews"],
+                }
+            ],
+            "limitations": [],
+        }
+
+    monkeypatch.setattr("app.intelligence.llm_client.complete_json", response_with_fake_quote)
+    product = _product()
+    product.reviews.full_review_text_ingested = True
+    product.reviews.items = [
+        ProductReview(
+            content="Taste is great- No junk in the ingredients.",
+            rating=5,
+            author="Zann B.",
+            verified_buyer=True,
+        )
+    ]
+
+    result = await evaluator.evaluate(product, "What can I improve?")
+    action = result.recommendations[0].suggested_action
+    assert "Taste is great- No junk in the ingredients." in action
+    assert "This completely changed my workouts." not in action
+    assert "Zann B." in action

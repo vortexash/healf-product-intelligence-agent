@@ -213,7 +213,8 @@ The full version is in [docs/roadmap.md](docs/roadmap.md).
 ## Known limitations
 
 - Vision runs on demand (when you ask about the images), not indexed for every product up front, and it reads panels rather than doing exhaustive OCR of every label.
-- Reviews are aggregate only (count and rating); individual review text isn't pulled in.
+- Review count/rating comes from JSON-LD, and the agent can quote the written Yotpo review samples
+  embedded in the current product page. It does not paginate through the complete review archive.
 - State is in-memory, so it resets on restart. Recent chats in the sidebar are stored in the browser.
 - Extraction depends on Healf's current markup, so a regression suite over saved pages is the first
   thing I'd add for production.

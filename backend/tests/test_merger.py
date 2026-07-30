@@ -1,6 +1,6 @@
 from app.ingestion.base import Fragment
 from app.ingestion.merger import merge
-from app.models import Money, ProductImage
+from app.models import Money, ProductImage, ProductReview, ReviewSummary
 
 
 def _merge(fragments):
@@ -60,3 +60,42 @@ def test_seo_prefers_html_over_embedded():
     html.set("seo", SeoData(title="HTML SEO"), "u")
     p = _merge([emb, html])
     assert p.seo.title == "HTML SEO"
+
+
+def test_reviews_merge_aggregate_with_written_yotpo_items():
+    embedded = Fragment("embedded_json")
+    embedded.set(
+        "reviews",
+        ReviewSummary(
+            present=True,
+            provider="yotpo",
+            full_review_text_ingested=True,
+            items=[
+                ProductReview(
+                    id="r1",
+                    content="A real customer review.",
+                    rating=5,
+                    author="A. Customer",
+                    verified_buyer=True,
+                )
+            ],
+        ),
+        "u",
+    )
+    jsonld = Fragment("json_ld")
+    jsonld.set(
+        "reviews",
+        ReviewSummary(
+            present=True,
+            count=522,
+            average_rating=4.9,
+            provider="healf_pdp",
+        ),
+        "u",
+    )
+
+    p = _merge([embedded, jsonld])
+    assert p.reviews.count == 522
+    assert p.reviews.average_rating == 4.9
+    assert p.reviews.full_review_text_ingested is True
+    assert p.reviews.items[0].content == "A real customer review."

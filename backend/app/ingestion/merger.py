@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from ..models import ProductData, ProductImage, ReviewSummary, SourceEvidence
+from ..models import ProductData, ProductImage, ProductReview, ReviewSummary, SourceEvidence
 from ..utilities import strip_html
 from .base import Fragment
 from .images_parser import _canonical
@@ -53,6 +53,7 @@ def merge(
     warnings: list[str] = []
 
     image_lists: list[list[ProductImage]] = []
+    review_summaries: list[tuple[ReviewSummary, str]] = []
 
     for frag in fragments:
         warnings.extend(frag.warnings)
@@ -60,6 +61,9 @@ def merge(
         for field, value in frag.fields.items():
             if field == "images":
                 image_lists.append(value)
+                continue
+            if field == "reviews":
+                review_summaries.append((value, frag.source_type))
                 continue
             rank = _pref_rank(field, frag.source_type)
             if field not in chosen:
@@ -82,9 +86,7 @@ def merge(
     if merged_images:
         fields["images"] = merged_images
 
-    # Reviews merge: prefer the entry with a count.
-    reviews = fields.get("reviews") or ReviewSummary()
-    fields["reviews"] = reviews
+    fields["reviews"] = _merge_reviews(review_summaries)
 
     # Derived description_text from html if only html present.
     if fields.get("description_html") and not fields.get("description_text"):
@@ -107,6 +109,48 @@ def merge(
         **{k: v for k, v in fields.items() if k in ProductData.model_fields and k not in ("selected_variant_id",)},
     )
     return product
+
+
+def _merge_reviews(values: list[tuple[ReviewSummary, str]]) -> ReviewSummary:
+    """Combine authoritative aggregates with embedded written review samples."""
+    if not values:
+        return ReviewSummary()
+
+    ranked = sorted(
+        values,
+        key=lambda pair: _pref_rank("reviews", pair[1]),
+        reverse=True,
+    )
+    merged = ReviewSummary()
+    items: list[ProductReview] = []
+    seen: set[str] = set()
+
+    for summary, _source in ranked:
+        if merged.present is None and summary.present is not None:
+            merged.present = summary.present
+        if merged.count is None and summary.count is not None:
+            merged.count = summary.count
+        if merged.average_rating is None and summary.average_rating is not None:
+            merged.average_rating = summary.average_rating
+        if merged.provider is None and summary.provider:
+            merged.provider = summary.provider
+        for item in summary.items:
+            key = item.id or f"{item.author}|{item.rating}|{item.content}"
+            if key not in seen:
+                seen.add(key)
+                items.append(item.model_copy(deep=True))
+
+    if items:
+        merged.items = items
+        merged.full_review_text_ingested = True
+        merged.present = True
+        if not merged.provider:
+            merged.provider = "yotpo"
+    else:
+        merged.full_review_text_ingested = any(
+            summary.full_review_text_ingested for summary, _source in ranked
+        )
+    return merged
 
 
 def _union_images(lists: list[list[ProductImage]]) -> list[ProductImage]:

@@ -32,6 +32,19 @@ def test_parses_subscription(lmnt_html, source_url):
     assert len(f["selling_plans"]) >= 1
 
 
+def test_parses_written_yotpo_reviews(lmnt_html, source_url):
+    reviews = ep.find_yotpo_reviews(lmnt_html)
+    assert len(reviews) == 10
+    assert reviews[0].content == "Taste is great- No junk in the ingredients."
+    assert reviews[0].author == "Zann B."
+    assert reviews[0].rating == 5
+
+    summary = ep.parse(lmnt_html, source_url).fields["reviews"]
+    assert summary.provider == "yotpo"
+    assert summary.full_review_text_ingested is True
+    assert len(summary.items) == 10
+
+
 def test_empty_html_returns_empty_fragment(source_url):
     frag = ep.parse("<html><body>nothing</body></html>", source_url)
     assert frag.fields == {}

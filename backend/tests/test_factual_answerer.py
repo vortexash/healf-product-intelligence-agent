@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from app.intelligence import factual_answerer as fa
 from app.intelligence.intent_router import classify
-from app.models import Money, ProductData, ProductImage, ReviewSummary, SellingPlan
+from app.models import Money, ProductData, ProductImage, ProductReview, ReviewSummary, SellingPlan
 
 
 def _product(**kw):
@@ -48,7 +48,7 @@ def test_reviews_present():
     assert any("individual review" in l.lower() for l in a.limitations)
 
 
-def test_individual_review_request_is_honest_and_does_not_repeat_aggregate_answer():
+def test_individual_review_request_without_text_is_honest():
     p = _product(reviews=ReviewSummary(present=True, count=522, average_rating=4.9))
     a = fa.answer_reviews(p, "pull any one review")
     assert "can't pull an individual written review" in a.text.lower()
@@ -56,6 +56,51 @@ def test_individual_review_request_is_honest_and_does_not_repeat_aggregate_answe
     assert "won't generate or paraphrase" in a.text.lower()
     assert "522" in a.text and "4.9" in a.text
     assert not a.text.startswith("**Yes, this product has reviews.**")
+
+
+def test_individual_review_request_returns_real_embedded_review():
+    p = _product(
+        reviews=ReviewSummary(
+            present=True,
+            count=522,
+            average_rating=4.9,
+            full_review_text_ingested=True,
+            items=[
+                ProductReview(
+                    id="1",
+                    content="Taste is great- No junk in the ingredients.",
+                    rating=5,
+                    author="Zann B.",
+                    verified_buyer=True,
+                )
+            ],
+        )
+    )
+    a = fa.answer_reviews(p, "pull any one review")
+    assert "published customer-review excerpt" in a.text.lower()
+    assert "Taste is great- No junk in the ingredients." in a.text
+    assert "Zann B." in a.text
+    assert "5/5" in a.text
+    assert "Verified buyer" in a.text
+    assert "can't pull" not in a.text.lower()
+
+
+def test_individual_review_markdown_is_escaped():
+    p = _product(
+        reviews=ReviewSummary(
+            present=True,
+            full_review_text_ingested=True,
+            items=[
+                ProductReview(
+                    content="Great [offer](https://example.com) and *results*.",
+                    rating=5,
+                )
+            ],
+        )
+    )
+    a = fa.answer_reviews(p, "show one review")
+    assert r"\[offer\](https://example.com)" in a.text
+    assert r"\*results\*" in a.text
 
 
 def test_rating_question_still_returns_aggregate_answer():

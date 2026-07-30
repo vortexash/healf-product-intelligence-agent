@@ -143,9 +143,54 @@ def _wants_individual_review(message: str) -> bool:
     return bool(_INDIVIDUAL_REVIEW_RE.search(message or ""))
 
 
+def _review_excerpt(text: str, max_words: int = 25) -> str:
+    words = re.findall(r"\S+", text or "")
+    excerpt = " ".join(words[:max_words])
+    excerpt += "..." if len(words) > max_words else ""
+    # Review bodies are untrusted user-generated content rendered through
+    # ReactMarkdown. Escape link/emphasis/HTML delimiters so a review cannot
+    # inject clickable content or alter the surrounding answer.
+    return re.sub(r"([\\`*_\[\]<>])", r"\\\1", excerpt)
+
+
 def answer_reviews(p: ProductData, message: str = "") -> ChatAnswer:
     r = p.reviews
     if _wants_individual_review(message):
+        available = [item for item in r.items if item.content.strip()]
+        if available:
+            if re.search(r"\b(latest|recent|newest)\b", message, re.IGNORECASE):
+                dated = [item for item in available if item.created_at is not None]
+                selected = max(dated, key=lambda item: item.created_at) if dated else available[0]
+            else:
+                selected = next(
+                    (item for item in available if item.verified_buyer is True),
+                    available[0],
+                )
+            metadata: list[str] = []
+            if selected.author:
+                metadata.append(f"**{selected.author}**")
+            if selected.rating is not None:
+                metadata.append(f"**{selected.rating:g}/5**")
+            if selected.verified_buyer is True:
+                metadata.append("Verified buyer")
+            if selected.created_at is not None:
+                metadata.append(selected.created_at.strftime("%d %b %Y").lstrip("0"))
+            byline = " · ".join(metadata)
+            text = (
+                "Here is one published customer-review excerpt from the live product page:\n\n"
+                f'> "{_review_excerpt(selected.content)}"'
+            )
+            if byline:
+                text += f"\n\n— {byline}"
+            return ChatAnswer(
+                text=text,
+                intent="review_lookup",
+                confidence="high",
+                limitations=[
+                    f"This is one of {len(available)} written review records embedded in the page, "
+                    "not a representative summary of all reviews."
+                ],
+            )
         details: list[str] = []
         if r.count is not None:
             details.append(f"**{r.count:,} reviews**")

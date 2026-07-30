@@ -149,22 +149,42 @@ def _sanitize_recommendations(
         combined = " ".join((rec.title, rec.rationale, rec.suggested_action))
         review_action = " ".join((rec.title, rec.suggested_action))
 
-        if _REVIEW_RE.search(review_action) and not p.reviews.full_review_text_ingested:
+        if _REVIEW_RE.search(review_action):
+            written = [item for item in p.reviews.items if item.content.strip()]
             count = f"{p.reviews.count:,}" if p.reviews.count is not None else "the available"
             rating = (
                 f" at {p.reviews.average_rating}/5"
                 if p.reviews.average_rating is not None
                 else ""
             )
-            rec.title = "Select verified review evidence"
-            rec.rationale = (
-                f"The page exposes aggregate data for {count} reviews{rating}, but no individual "
-                "review text was ingested, so the available evidence cannot support a quotation."
-            )
-            rec.suggested_action = (
-                "Choose a real, permissioned customer quote in the review platform, verify it "
-                "against the original submission, and then add it to the page without paraphrasing."
-            )
+            if written:
+                selected = next(
+                    (item for item in written if item.verified_buyer is True),
+                    written[0],
+                )
+                quote = _word_excerpt(selected.content)
+                attribution = selected.author or "Healf customer"
+                score = f", {selected.rating:g}/5" if selected.rating is not None else ""
+                verified = ", verified buyer" if selected.verified_buyer is True else ""
+                rec.title = "Use verified review evidence"
+                rec.rationale = (
+                    f"The page exposes {count} reviews{rating} and includes written Yotpo review "
+                    "records, so social proof can use a real quotation rather than generated copy."
+                )
+                rec.suggested_action = (
+                    f'Use this page-sourced excerpt exactly as written: "{quote}" '
+                    f"— {attribution}{score}{verified}."
+                )
+            else:
+                rec.title = "Select verified review evidence"
+                rec.rationale = (
+                    f"The page exposes aggregate data for {count} reviews{rating}, but no individual "
+                    "review text was ingested, so the available evidence cannot support a quotation."
+                )
+                rec.suggested_action = (
+                    "Choose a real, permissioned customer quote in the review platform, verify it "
+                    "against the original submission, and then add it to the page without paraphrasing."
+                )
             rec.evidence_fields = _existing_fields(available_fields, "reviews")
             changed = True
         elif _unsupported_claim_markers(p, combined):
@@ -217,6 +237,11 @@ def _guardrail_topic(rec: Recommendation) -> str | None:
     if _DIETARY_RE.search(title_and_action):
         return "dietary"
     return None
+
+
+def _word_excerpt(text: str, max_words: int = 25) -> str:
+    words = re.findall(r"\S+", text or "")
+    return " ".join(words[:max_words]) + ("..." if len(words) > max_words else "")
 
 
 def _existing_fields(available: set[str], *candidates: str) -> list[str]:

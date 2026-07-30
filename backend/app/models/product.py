@@ -59,12 +59,26 @@ class ProductVariant(BaseModel):
     selling_plans: list[SellingPlan] = []
 
 
+class ProductReview(BaseModel):
+    id: str | None = None
+    title: str | None = None
+    content: str
+    rating: float | None = None
+    author: str | None = None
+    created_at: datetime | None = None
+    verified_buyer: bool | None = None
+    votes_up: int | None = None
+    votes_down: int | None = None
+    images: list[str] = []
+
+
 class ReviewSummary(BaseModel):
     present: bool | None = None
     count: int | None = None
     average_rating: float | None = None
     provider: str | None = None
     full_review_text_ingested: bool = False
+    items: list[ProductReview] = []
 
 
 class SeoData(BaseModel):
