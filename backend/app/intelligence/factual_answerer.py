@@ -143,6 +143,10 @@ _CONTEXTUAL_REVIEW_RE = re.compile(
     r"^\s*(another(?:\s+one)?|one\s+more|next(?:\s+one)?|more)\s*[?.!]*\s*$",
     re.IGNORECASE,
 )
+_TOP_REVIEW_RE = re.compile(
+    r"\b(top|best|highest[- ]rated|most helpful)\b",
+    re.IGNORECASE,
+)
 _NUMBER_WORDS = {
     "one": 1,
     "two": 2,
@@ -184,6 +188,16 @@ def _requested_review_count(message: str) -> int:
     return 1
 
 
+def _review_rank(review) -> tuple[float, int, int, int, float]:
+    """Rank published reviews by rating, helpfulness, verification, then recency."""
+    rating = review.rating if review.rating is not None else -1.0
+    votes_up = review.votes_up or 0
+    net_helpful = votes_up - (review.votes_down or 0)
+    verified = 1 if review.verified_buyer is True else 0
+    created = review.created_at.timestamp() if review.created_at is not None else 0.0
+    return rating, net_helpful, votes_up, verified, created
+
+
 def _review_block(review, number: int | None = None) -> str:
     metadata: list[str] = []
     if review.author:
@@ -216,7 +230,10 @@ def answer_reviews(
         available = [item for item in r.items if item.content.strip()]
         if available:
             requested = min(_requested_review_count(message), len(available))
-            if re.search(r"\b(latest|recent|newest)\b", message, re.IGNORECASE):
+            wants_top = bool(_TOP_REVIEW_RE.search(message))
+            if wants_top:
+                selected_reviews = sorted(available, key=_review_rank, reverse=True)[:requested]
+            elif re.search(r"\b(latest|recent|newest)\b", message, re.IGNORECASE):
                 dated = [item for item in available if item.created_at is not None]
                 selected_reviews = [
                     max(dated, key=lambda item: item.created_at) if dated else available[0]
@@ -233,10 +250,16 @@ def answer_reviews(
                     for offset in range(requested)
                 ]
             if len(selected_reviews) == 1:
-                text = "Sure - here's one:\n\n" + _review_block(selected_reviews[0])
+                intro = "Sure - here's the top review:" if wants_top else "Sure - here's one:"
+                text = intro + "\n\n" + _review_block(selected_reviews[0])
             else:
+                intro = (
+                    f"Sure - here are the top {len(selected_reviews)} reviews:"
+                    if wants_top
+                    else f"Sure - here are {len(selected_reviews)} reviews:"
+                )
                 text = (
-                    f"Sure - here are {len(selected_reviews)} reviews:\n\n"
+                    intro + "\n\n"
                     + "\n\n".join(
                         _review_block(review, index)
                         for index, review in enumerate(selected_reviews, start=1)

@@ -113,6 +113,34 @@ def test_review_quantity_and_followup_continue_without_repeating():
     assert "Review number 1." not in followup.text
 
 
+def test_top_five_review_typo_singular_is_ranked():
+    reviews = [
+        ProductReview(id="low", content="Lower rated.", rating=3, votes_up=100),
+        ProductReview(id="fifth", content="Fifth best.", rating=4, votes_up=1),
+        ProductReview(id="fourth", content="Fourth best.", rating=5, votes_up=1),
+        ProductReview(id="third", content="Third best.", rating=5, votes_up=3),
+        ProductReview(id="second", content="Second best.", rating=5, votes_up=5),
+        ProductReview(id="first", content="First best.", rating=5, votes_up=10),
+    ]
+    p = _product(
+        reviews=ReviewSummary(
+            present=True,
+            count=6,
+            average_rating=4.5,
+            full_review_text_ingested=True,
+            items=reviews,
+        )
+    )
+
+    answer = fa.answer_reviews(p, "give nme the top 5 review")
+
+    assert "here are the top 5 reviews" in answer.text.lower()
+    assert answer.text.count('> "') == 5
+    assert answer.text.index("First best.") < answer.text.index("Second best.")
+    assert answer.text.index("Second best.") < answer.text.index("Third best.")
+    assert "Lower rated." not in answer.text
+
+
 def test_individual_review_markdown_is_escaped():
     p = _product(
         reviews=ReviewSummary(
