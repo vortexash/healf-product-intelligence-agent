@@ -190,7 +190,7 @@ curl -X POST localhost:8000/api/chat -H 'content-type: application/json' \
 ## Tests
 
 ```bash
-cd backend && pytest -q       # 112 tests: URL/SSRF, parsers, merger, conversation, grounding, evaluation, API
+cd backend && pytest -q       # 115 tests: URL/SSRF, parsers, merger, conversation, grounding, evaluation, API
 cd frontend && npm test       # 15 component/history tests
 ```
 

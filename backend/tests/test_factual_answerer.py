@@ -190,6 +190,7 @@ def test_intent_routing():
     assert classify("What can I improve on this page?").intent == "page_evaluation"
     assert classify("Rewrite the description").intent == "content_rewrite"
     assert classify("Create an FAQ").intent == "faq_generation"
+    assert classify("any organic product you have?").intent == "product_recommendation"
 
 
 def test_compound_intent_routing_keeps_every_requested_task():
@@ -200,3 +201,9 @@ def test_compound_intent_routing_keeps_every_requested_task():
 def test_ingredient_target_extraction():
     r = classify("Does it contain Vitamin D?")
     assert r.target_entity and "vitamin d" in r.target_entity.lower()
+
+
+def test_product_name_does_not_become_target_for_full_ingredient_list():
+    result = classify("Paleo Protein - Salted Caramel what is the ingredient")
+    assert result.intent == "ingredient_lookup"
+    assert result.target_entity is None

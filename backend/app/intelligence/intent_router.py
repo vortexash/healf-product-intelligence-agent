@@ -40,6 +40,7 @@ _RULES: list[tuple[str, list[str]]] = [
         [
             r"\bdo you (?:have|stock|sell|carry)\b",
             r"\bdoes healf (?:have|stock|sell|carry)\b",
+            r"\bany\b.*\b(?:products?|items?|options?)\b.*\b(?:you|healf)\s+(?:have|stock|sell|carry)\b",
             r"\b(?:are|is) there any\b.*\b(?:products?|items?|options?|bars?|supplements?|snacks?)\b",
             r"\b(?:i am|i'm) looking for\b",
             r"\bsimilar (?:items?|products?|options?)\b",
@@ -121,6 +122,14 @@ def _extract_target(intent: str, message: str) -> str | None:
     from .factual_answerer import INGREDIENT_ALIASES
 
     norm_msg = normalize(message)
+    # A request for "the ingredient(s)" asks for the full list. Product names
+    # can themselves contain ingredient words (for example "Paleo Protein"),
+    # which must not be mistaken for a targeted protein lookup.
+    if re.search(
+        r"\b(?:what(?: is| are| s) (?:the )?ingredients?|list (?:the |all )?ingredients?)\b",
+        norm_msg,
+    ):
+        return None
     for key, aliases in INGREDIENT_ALIASES.items():
         for term in [key, *aliases]:
             if re.search(r"\b" + re.escape(term) + r"\b", norm_msg):

@@ -40,6 +40,7 @@ def test_derive_search_query_prefers_explicit_requested_topic(electrolyte_produc
         ("Do you have any collagen powder?", "collagen powder"),
         ("Do you have any sleep masks?", "sleep mask"),
         ("Do you have any shampoo?", "shampoo"),
+        ("any organic product you have?", "organic"),
         ("Do you have any red light therapy devices?", "red light therapy devices"),
     ],
 )
@@ -105,6 +106,34 @@ async def test_discover_rejects_unrelated_catalog_results(monkeypatch):
 
     assert query == "sleep mask"
     assert [item.handle for item in suggestions] == ["pure-silk-sleep-mask"]
+
+
+async def test_discover_can_match_dietary_attribute_from_catalog_tags(monkeypatch):
+    async def fake_search(query, first):
+        assert query == "organic"
+        return [
+            ProductSuggestion(
+                title="Daily Greens",
+                vendor="Brand A",
+                handle="daily-greens",
+                price="£24.00",
+                available=True,
+                tags=("Certified Organic", "Vegan"),
+            ),
+            ProductSuggestion(
+                title="Unrelated Product",
+                vendor="Brand B",
+                handle="unrelated-product",
+                price="£20.00",
+                available=True,
+            ),
+        ]
+
+    monkeypatch.setattr(product_search, "_search_catalog", fake_search)
+    _, suggestions, _, query = await product_search.discover("any organic product you have?")
+
+    assert query == "organic"
+    assert [item.handle for item in suggestions] == ["daily-greens"]
 
 
 def test_parse_public_storefront_config():

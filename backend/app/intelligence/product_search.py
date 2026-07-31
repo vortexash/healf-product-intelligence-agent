@@ -24,6 +24,7 @@ query SearchProducts($query: String!, $first: Int!) {
       title
       vendor
       productType
+      tags
       availableForSale
       priceRange { minVariantPrice { amount currencyCode } }
     }
@@ -45,6 +46,7 @@ _TOPIC_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("vitamin d", ("vitamin d",)),
     ("sunscreen", ("sunscreen", "sun cream", "spf")),
     ("shampoo", ("shampoo", "shampoos", "hairbath", "hair wash")),
+    ("organic", ("organic", "certified organic", "organically certified")),
     ("skincare", ("skincare", "skin care")),
     ("sleep", ("sleep",)),
 )
@@ -59,6 +61,7 @@ _MATCH_ALIASES: dict[str, tuple[str, ...]] = {
     "omega 3": ("omega", "fish oil"),
     "sunscreen": ("sunscreen", "sun cream", "spf"),
     "shampoo": ("shampoo", "hairbath", "hair wash"),
+    "organic": ("organic",),
     "skincare": ("skincare", "skin care", "serum", "cleanser"),
 }
 
@@ -77,6 +80,7 @@ class ProductSuggestion:
     available: bool
     price_amount: float | None = None
     product_type: str | None = None
+    tags: tuple[str, ...] = ()
 
     @property
     def url(self) -> str:
@@ -270,6 +274,11 @@ def derive_discovery_query(message: str) -> str:
     )
     candidate = re.sub(r"^(?:can you )?(?:show|find|recommend)(?: me)? ", "", candidate)
     candidate = re.sub(r"^(?:i am|i m) looking for ", "", candidate)
+    candidate = re.sub(
+        r"\s+(?:do )?(?:you|healf)\s+(?:have|stock|sell|carry)$",
+        "",
+        candidate,
+    )
     tokens = [
         token
         for token in candidate.split()
@@ -296,7 +305,9 @@ def _prefer_topic_matches(
             for item in available
             if any(
                 _normalise(alias)
-                in _normalise(f"{item.title} {item.handle} {item.product_type or ''}")
+                in _normalise(
+                    f"{item.title} {item.handle} {item.product_type or ''} {' '.join(item.tags)}"
+                )
                 for alias in aliases
             )
         ]
@@ -308,7 +319,7 @@ def _prefer_topic_matches(
             item_tokens = {
                 _singular_token(token)
                 for token in _normalise(
-                    f"{item.title} {item.handle} {item.product_type or ''}"
+                    f"{item.title} {item.handle} {item.product_type or ''} {' '.join(item.tags)}"
                 ).split()
             }
             if len(query_tokens & item_tokens) >= required:
@@ -387,6 +398,7 @@ def _suggestion_from_node(node: dict) -> ProductSuggestion:
         available=bool(node.get("availableForSale")),
         price_amount=price_amount,
         product_type=str(node["productType"]) if node.get("productType") else None,
+        tags=tuple(str(tag) for tag in (node.get("tags") or []) if tag),
     )
 
 
