@@ -33,8 +33,18 @@ def test_derive_search_query_prefers_explicit_requested_topic(electrolyte_produc
     )
 
 
-def test_derive_discovery_query_understands_natural_category_question():
-    assert product_search.derive_discovery_query("Do you have any protein bars?") == "protein bar"
+@pytest.mark.parametrize(
+    ("question", "expected"),
+    [
+        ("Do you have any protein bars?", "protein bar"),
+        ("Do you have any collagen powder?", "collagen powder"),
+        ("Do you have any sleep masks?", "sleep mask"),
+        ("Do you have any shampoo?", "shampoo"),
+        ("Do you have any red light therapy devices?", "red light therapy devices"),
+    ],
+)
+def test_derive_discovery_query_understands_natural_category_question(question, expected):
+    assert product_search.derive_discovery_query(question) == expected
 
 
 async def test_discover_returns_live_category_matches(monkeypatch):
@@ -68,6 +78,33 @@ async def test_discover_returns_live_category_matches(monkeypatch):
     assert [item.handle for item in suggestions] == ["chocolate-protein-bar"]
     assert "Chocolate Protein Bar" in text
     assert len(evidence) == 1
+
+
+async def test_discover_rejects_unrelated_catalog_results(monkeypatch):
+    async def fake_search(query, first):
+        assert query == "sleep mask"
+        return [
+            ProductSuggestion(
+                title="Menstrual Cup B",
+                vendor="Mooncup",
+                handle="menstrual-cup-b",
+                price="£23.50",
+                available=True,
+            ),
+            ProductSuggestion(
+                title="Pure Silk Sleep Mask",
+                vendor="Slip",
+                handle="pure-silk-sleep-mask",
+                price="£50.00",
+                available=True,
+            ),
+        ]
+
+    monkeypatch.setattr(product_search, "_search_catalog", fake_search)
+    _, suggestions, _, query = await product_search.discover("Do you have any sleep masks?")
+
+    assert query == "sleep mask"
+    assert [item.handle for item in suggestions] == ["pure-silk-sleep-mask"]
 
 
 def test_parse_public_storefront_config():

@@ -33,6 +33,8 @@ query SearchProducts($query: String!, $first: Int!) {
 
 _TOPIC_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("protein bar", ("protein bar", "protein bars", "protein snack", "protein snacks")),
+    ("collagen powder", ("collagen powder", "collagen powders", "collagen peptides")),
+    ("sleep mask", ("sleep mask", "sleep masks", "eye mask", "eye masks")),
     ("electrolyte", ("electrolyte", "electrolytes", "hydration salts")),
     ("magnesium", ("magnesium",)),
     ("protein", ("protein", "proteins")),
@@ -42,17 +44,21 @@ _TOPIC_ALIASES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("omega 3", ("omega 3", "omega-3", "fish oil")),
     ("vitamin d", ("vitamin d",)),
     ("sunscreen", ("sunscreen", "sun cream", "spf")),
+    ("shampoo", ("shampoo", "shampoos", "hairbath", "hair wash")),
     ("skincare", ("skincare", "skin care")),
     ("sleep", ("sleep",)),
 )
 
 _MATCH_ALIASES: dict[str, tuple[str, ...]] = {
     "protein bar": ("protein bar", "protein-bar", "bar"),
+    "collagen powder": ("collagen", "peptide"),
+    "sleep mask": ("sleep mask", "eye mask", "mask"),
     "electrolyte": ("electrolyte", "hydration", "hydrating", "salts"),
     "protein": ("protein", "amino"),
     "probiotic": ("probiotic", "gut"),
     "omega 3": ("omega", "fish oil"),
     "sunscreen": ("sunscreen", "sun cream", "spf"),
+    "shampoo": ("shampoo", "hairbath", "hair wash"),
     "skincare": ("skincare", "skin care", "serum", "cleanser"),
 }
 
@@ -70,6 +76,7 @@ class ProductSuggestion:
     price: str | None
     available: bool
     price_amount: float | None = None
+    product_type: str | None = None
 
     @property
     def url(self) -> str:
@@ -153,7 +160,7 @@ async def discover(
     query = derive_discovery_query(message)
     suggestions = await _search_catalog(query, first=max(12, limit * 3))
     suggestions = [suggestion for suggestion in suggestions if suggestion.available]
-    suggestions = _prefer_topic_matches(suggestions, query)
+    suggestions = _prefer_topic_matches(suggestions, query, strict=True)
 
     price_limit = _requested_price_limit(message)
     if price_limit is not None:
@@ -256,10 +263,6 @@ def derive_search_query(product: ProductData, message: str) -> str:
 def derive_discovery_query(message: str) -> str:
     """Extract a useful catalogue topic from a natural shopping question."""
     message_norm = _normalise(message)
-    for topic, aliases in _TOPIC_ALIASES:
-        if any(_contains_phrase(message_norm, alias) for alias in aliases):
-            return topic
-
     candidate = re.sub(
         r"^(?:please )?(?:do you|does healf) (?:have|stock|sell|carry)(?: any)? ",
         "",
@@ -270,24 +273,57 @@ def derive_discovery_query(message: str) -> str:
     tokens = [
         token
         for token in candidate.split()
-        if token not in {"a", "an", "any", "please", "product", "products", "item", "items", "option", "options"}
+        if token not in {
+            "a", "an", "any", "please", "some", "instead", "product", "products",
+            "item", "items", "option", "options",
+        }
     ]
-    return " ".join(tokens[:5]) or "wellbeing"
+    query = " ".join(tokens[:5]) or "wellbeing"
+    for topic, aliases in _TOPIC_ALIASES:
+        if query in {_normalise(alias) for alias in aliases}:
+            return topic
+    return query
 
 
 def _prefer_topic_matches(
-    suggestions: list[ProductSuggestion], query: str
+    suggestions: list[ProductSuggestion], query: str, strict: bool = False
 ) -> list[ProductSuggestion]:
     aliases = _MATCH_ALIASES.get(query)
-    if not aliases:
-        return [item for item in suggestions if "sample" not in item.title.lower()]
-    matched = [
-        item
-        for item in suggestions
-        if "sample" not in item.title.lower()
-        and any(alias in _normalise(f"{item.title} {item.handle}") for alias in aliases)
-    ]
-    return matched or [item for item in suggestions if "sample" not in item.title.lower()]
+    available = [item for item in suggestions if "sample" not in item.title.lower()]
+    if aliases:
+        matched = [
+            item
+            for item in available
+            if any(
+                _normalise(alias)
+                in _normalise(f"{item.title} {item.handle} {item.product_type or ''}")
+                for alias in aliases
+            )
+        ]
+    else:
+        query_tokens = {_singular_token(token) for token in _normalise(query).split() if len(token) > 2}
+        required = min(2, len(query_tokens))
+        matched = []
+        for item in available:
+            item_tokens = {
+                _singular_token(token)
+                for token in _normalise(
+                    f"{item.title} {item.handle} {item.product_type or ''}"
+                ).split()
+            }
+            if len(query_tokens & item_tokens) >= required:
+                matched.append(item)
+    return matched if matched or strict else available
+
+
+def _singular_token(token: str) -> str:
+    if len(token) > 4 and token.endswith("ies"):
+        return token[:-3] + "y"
+    if len(token) > 4 and token.endswith(("ches", "shes", "xes", "zes")):
+        return token[:-2]
+    if len(token) > 3 and token.endswith("s") and not token.endswith("ss"):
+        return token[:-1]
+    return token
 
 
 async def _search_catalog(query: str, first: int) -> list[ProductSuggestion]:
@@ -350,6 +386,7 @@ def _suggestion_from_node(node: dict) -> ProductSuggestion:
         price=_format_money(money.get("amount"), money.get("currencyCode")),
         available=bool(node.get("availableForSale")),
         price_amount=price_amount,
+        product_type=str(node["productType"]) if node.get("productType") else None,
     )
 
 
