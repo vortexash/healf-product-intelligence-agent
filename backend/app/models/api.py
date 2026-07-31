@@ -3,16 +3,27 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .evaluation import ProductEvaluation
 from .product import ProductData, SourceEvidence
+
+
+class ConversationMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str = Field(max_length=4000)
 
 
 class ChatRequest(BaseModel):
     session_id: str | None = None
     message: str
     product_url: str | None = None
+    # The browser sends recent turns so a locally saved thread can recover its
+    # conversational context even after the in-memory backend session expires.
+    history: list[ConversationMessage] = Field(default_factory=list, max_length=12)
+    # Suggestions already rendered in a browser-saved thread. This prevents
+    # stale chips from reappearing after an in-memory backend restart.
+    shown_suggestions: list[str] = Field(default_factory=list, max_length=24)
 
 
 class ChatAnswer(BaseModel):

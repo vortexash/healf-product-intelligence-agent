@@ -142,6 +142,36 @@ async def test_supported_dietary_claim_is_not_removed(monkeypatch):
     assert not any("verification-first" in limitation for limitation in result.limitations)
 
 
+async def test_zero_sugar_does_not_become_unverified_dietary_suitability(monkeypatch):
+    monkeypatch.setattr("app.intelligence.llm_client.is_configured", lambda: True)
+    monkeypatch.setattr("app.intelligence.evaluator.load_benchmark", lambda: None)
+
+    async def unsafe_suitability(system, user, **kwargs):
+        return {
+            "summary": "The page explicitly describes a zero-sugar formula.",
+            "recommendations": [
+                {
+                    "priority": 1,
+                    "title": "Promote dietary suitability",
+                    "rationale": "The product is described as zero sugar.",
+                    "suggested_action": "Position it as suitable for specific dietary needs.",
+                    "evidence_fields": ["description_text"],
+                }
+            ],
+            "limitations": [],
+        }
+
+    monkeypatch.setattr("app.intelligence.llm_client.complete_json", unsafe_suitability)
+    result = await evaluator.evaluate(
+        _product(description="An electrolyte variety pack with a zero-sugar formula."),
+        "What can I improve?",
+    )
+
+    assert result.recommendations[0].title == "Verify allergen and dietary information"
+    assert "Do not infer suitability" in result.recommendations[0].suggested_action
+    assert any("verification-first" in limitation for limitation in result.limitations)
+
+
 async def test_review_count_in_rationale_does_not_replace_unrelated_action(monkeypatch):
     monkeypatch.setattr("app.intelligence.llm_client.is_configured", lambda: True)
     monkeypatch.setattr("app.intelligence.evaluator.load_benchmark", lambda: None)

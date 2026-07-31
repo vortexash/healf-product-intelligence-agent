@@ -12,7 +12,15 @@ import { ContentDraftCard } from "@/components/intelligence/content-draft";
 import { Citations } from "@/components/intelligence/citations";
 import type { ThreadMessage } from "./model";
 
-export function Message({ m, onFollowUp }: { m: ThreadMessage; onFollowUp: (prompt: string) => void }) {
+export function Message({
+  m,
+  onFollowUp,
+  showSuggestions = true,
+}: {
+  m: ThreadMessage;
+  onFollowUp: (prompt: string) => void;
+  showSuggestions?: boolean;
+}) {
   if (m.role === "user") {
     return (
       <div className="flex justify-end animate-fade-up">
@@ -72,7 +80,7 @@ export function Message({ m, onFollowUp }: { m: ThreadMessage; onFollowUp: (prom
           )}
           {!m.streaming && m.contentDraft && <ContentDraftCard draft={m.contentDraft} />}
 
-          {!m.streaming && m.suggested && m.suggested.length > 0 && (
+          {showSuggestions && !m.streaming && m.suggested && m.suggested.length > 0 && (
             <PromptChips prompts={m.suggested} onPick={onFollowUp} />
           )}
         </div>

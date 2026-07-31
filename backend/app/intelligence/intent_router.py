@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from ..utilities import normalize
 
 INTENTS = [
+    "product_recommendation",
     "product_summary",
     "review_lookup",
     "ingredient_lookup",
@@ -34,6 +35,19 @@ class IntentResult(BaseModel):
 
 # Ordered rules: (intent, keyword patterns). First strong match wins.
 _RULES: list[tuple[str, list[str]]] = [
+    (
+        "product_recommendation",
+        [
+            r"\bdo you (?:have|stock|sell|carry)\b",
+            r"\bdoes healf (?:have|stock|sell|carry)\b",
+            r"\b(?:are|is) there any\b.*\b(?:products?|items?|options?|bars?|supplements?|snacks?)\b",
+            r"\b(?:i am|i'm) looking for\b",
+            r"\bsimilar (?:items?|products?|options?)\b",
+            r"\b(?:other|alternative) (?:products?|items?|options?)\b",
+            r"\b(?:suggest|recommend)\w*\b.*\b(?:products?|items?|options?|alternatives?)\b",
+            r"\b(?:show|find)\b.*\b(?:products?|items?|options?|alternatives?)\b",
+        ],
+    ),
     ("faq_generation", [r"\bfaq\b", r"frequently asked", r"create.*questions"]),
     ("content_rewrite", [r"\brewrite\b", r"\bre-?write\b", r"improve the (description|copy|text)", r"\brephrase\b", r"better (description|copy|version)", r"generate.*(description|copy|content)", r"draft (a|an|the)"]),
     ("seo_evaluation", [r"\bseo\b", r"meta description", r"search (engine|ranking)", r"page title"]),
@@ -49,18 +63,10 @@ _RULES: list[tuple[str, list[str]]] = [
 
 
 def classify(message: str) -> IntentResult:
-    norm = normalize(message)
-    raw = message.lower()
-    for intent, patterns in _RULES:
-        for pat in patterns:
-            if re.search(pat, raw):
-                target = _extract_target(intent, message)
-                return IntentResult(
-                    intent=intent,
-                    target_entity=target,
-                    requires_llm=intent in LLM_INTENTS,
-                    confidence=0.85,
-                )
+    matches = classify_all(message)
+    if matches:
+        return matches[0]
+
     # Fallback: unclear -> general question answered with light LLM help.
     return IntentResult(
         intent="general_product_question",
@@ -68,6 +74,42 @@ def classify(message: str) -> IntentResult:
         requires_llm=True,
         confidence=0.4,
     )
+
+
+def classify_all(message: str) -> list[IntentResult]:
+    """Return every strong intent present in a message, in routing order.
+
+    ``classify`` deliberately keeps the original single-intent API for simple
+    factual requests.  Conversation orchestration uses this richer form so a
+    request such as "compare the price and reviews" does not silently discard
+    half of what the user asked.
+    """
+    raw = message.lower()
+    matches: list[IntentResult] = []
+    for intent, patterns in _RULES:
+        for pat in patterns:
+            if re.search(pat, raw):
+                target = _extract_target(intent, message)
+                matches.append(
+                    IntentResult(
+                        intent=intent,
+                        target_entity=target,
+                        requires_llm=intent in LLM_INTENTS,
+                        confidence=0.85,
+                    )
+                )
+                break
+    # The ingredient rules intentionally support unknown names in phrases like
+    # "does it have ashwagandha?".  In a multi-intent scan that generic phrase
+    # can also overlap stronger nouns ("does it have reviews?").  Keep the
+    # ingredient match only when the message carries an ingredient-specific
+    # signal or when it is the sole match.
+    if len(matches) > 1 and not re.search(
+        r"\b(ingredients?|contains?|includes?|vitamins?|magnesium|caffeine|sugar|allergens?|nutrition|inside)\b",
+        raw,
+    ):
+        matches = [match for match in matches if match.intent != "ingredient_lookup"]
+    return matches
 
 
 def _extract_target(intent: str, message: str) -> str | None:

@@ -17,7 +17,13 @@ import {
   type HistoryEntry,
 } from "@/lib/local-history";
 import type { ProductData } from "@/lib/types";
-import type { ThreadMessage } from "./model";
+import {
+  conversationHistory,
+  latestThreadProduct,
+  productContextUrl,
+  shownSuggestions,
+  type ThreadMessage,
+} from "./model";
 
 const INTRO_PROMPTS = [
   "Does this product have reviews?",
@@ -69,10 +75,12 @@ export function ChatShell() {
 
   const openChat = (e: HistoryEntry) => {
     const t = loadThread(e.sessionId);
-    setMessages(t?.messages ?? []);
-    setActiveProduct(t?.product ?? null);
+    const savedMessages = t?.messages ?? [];
+    const recoveredProduct = latestThreadProduct(savedMessages) ?? t?.product ?? null;
+    setMessages(savedMessages);
+    setActiveProduct(recoveredProduct);
     setSessionId(e.sessionId);
-    setPendingProductUrl(t?.product?.source_url ?? e.productUrl ?? null);
+    setPendingProductUrl(recoveredProduct?.source_url ?? e.productUrl ?? null);
     setInput("");
     setSidebarOpen(false);
   };
@@ -112,11 +120,13 @@ export function ChatShell() {
       if (!text || busy) return;
       setInput("");
       setBusy(true);
-      const resumeUrl = pendingProductUrl;
+      const contextUrl = productContextUrl(activeProduct, pendingProductUrl);
       setPendingProductUrl(null);
 
       const userMsg: ThreadMessage = { id: uid(), role: "user", text };
       const assistantMsg: ThreadMessage = { id: uid(), role: "assistant", text: "", streaming: true, status: [] };
+      const history = conversationHistory(messages);
+      const previousSuggestions = shownSuggestions(messages);
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
       let sawProduct: ProductData | null = null;
@@ -125,7 +135,13 @@ export function ChatShell() {
       let streamedText = "";
 
       streamChat(
-        { session_id: sessionId ?? undefined, message: text, product_url: resumeUrl ?? undefined },
+        {
+          session_id: sessionId ?? undefined,
+          message: text,
+          product_url: contextUrl,
+          history,
+          shown_suggestions: previousSuggestions,
+        },
         {
           onStatus: (s) => {
             statusLog!.push(s);
@@ -134,7 +150,10 @@ export function ChatShell() {
           onProduct: (p) => {
             sawProduct = p;
             setActiveProduct(p);
-            patchLast({ product: p, showProductCard: firstProductInSession });
+            patchLast({
+              product: p,
+              showProductCard: firstProductInSession || activeProduct?.handle !== p.handle,
+            });
           },
           onToken: (t) => {
             streamedText += t;
@@ -153,6 +172,7 @@ export function ChatShell() {
               suggested: r.suggested_actions,
             });
             const prod = r.product ?? sawProduct;
+            if (prod) setActiveProduct(prod);
             const primary = prod?.images.find((i) => i.is_primary) ?? prod?.images[0];
             setHistory(
               upsertHistory({
@@ -173,7 +193,7 @@ export function ChatShell() {
         },
       );
     },
-    [input, busy, sessionId, activeProduct, pendingProductUrl, patchLast],
+    [input, busy, sessionId, activeProduct, pendingProductUrl, messages, patchLast],
   );
 
   const empty = messages.length === 0;
@@ -248,7 +268,12 @@ export function ChatShell() {
             ) : (
               <div className="space-y-7">
                 {messages.map((m) => (
-                  <Message key={m.id} m={m} onFollowUp={(p) => send(p)} />
+                  <Message
+                    key={m.id}
+                    m={m}
+                    onFollowUp={(p) => send(p)}
+                    showSuggestions={!busy && m.id === messages[messages.length - 1]?.id}
+                  />
                 ))}
                 <div ref={bottomRef} className="h-1" />
               </div>

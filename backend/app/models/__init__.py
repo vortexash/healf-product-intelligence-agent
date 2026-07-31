@@ -3,6 +3,7 @@ from .api import (
     ChatAnswer,
     ChatRequest,
     ChatResponse,
+    ConversationMessage,
     ContentDraft,
     FetchRequest,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "ChatAnswer",
     "ChatRequest",
     "ChatResponse",
+    "ConversationMessage",
     "ContentDraft",
     "FetchRequest",
     "EvaluationCategory",

@@ -7,6 +7,18 @@ import type { SourceEvidence } from "@/lib/types";
 export function Citations({ evidence }: { evidence: SourceEvidence[] }) {
   if (!evidence || evidence.length === 0) return null;
 
+  const catalogMatches = evidence.filter((item) => item.field === "product_recommendation");
+  if (catalogMatches.length === evidence.length) {
+    return (
+      <div className="mt-3 text-xs text-muted">
+        <span className="font-medium">Sources:</span>{" "}
+        <span>
+          {catalogMatches.length} live Healf catalog {catalogMatches.length === 1 ? "match" : "matches"} linked above
+        </span>
+      </div>
+    );
+  }
+
   // Everything is read from the same live product page, so link to it once.
   const url = evidence[0].source_url;
 

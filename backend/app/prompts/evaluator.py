@@ -38,7 +38,11 @@ Guardrails:
 10. Do not infer physiological, performance, or health effects from an ingredient name. Benefit
     copy must reuse claims already present in `description` or `benefits`; otherwise recommend
     substantiation and regulatory review.
-11. Return valid JSON only, matching the requested schema.
+11. Review count and rating can be described as strong aggregate review evidence, but they do not
+    prove product quality, reliability, effectiveness, representativeness, or customer satisfaction.
+12. Do not turn "zero sugar" or another isolated attribute into dietary suitability. State only
+    the supplied attribute unless suitability is explicitly present in the facts.
+13. Return valid JSON only, matching the requested schema.
 """
 
 SCHEMA_HINT = """Return ONLY JSON of this exact shape:

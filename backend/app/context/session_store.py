@@ -15,6 +15,7 @@ class Session:
     active_product_url: str | None = None
     product: ProductData | None = None
     messages: list[dict] = field(default_factory=list)
+    suggested_actions_shown: list[str] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
 

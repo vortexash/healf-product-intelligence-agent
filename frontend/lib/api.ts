@@ -1,3 +1,4 @@
+import type { ConversationTurn } from "@/components/chat/model";
 import type { ChatResponse, ProductData, StreamHandlers } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -12,7 +13,13 @@ export async function getHealth(): Promise<{ status: string; llm_configured: boo
  * Uses fetch streaming (not EventSource) so we can POST a JSON body.
  */
 export async function streamChat(
-  body: { session_id?: string; message: string; product_url?: string },
+  body: {
+    session_id?: string;
+    message: string;
+    product_url?: string;
+    history?: ConversationTurn[];
+    shown_suggestions?: string[];
+  },
   handlers: StreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {

@@ -72,7 +72,13 @@ async def chat(req: ChatRequest) -> JSONResponse:
     session = sessions.get_or_create(req.session_id)
     product = None
     composed = None
-    async for kind, payload in chat_service.pipeline(session, req.message, req.product_url):
+    async for kind, payload in chat_service.pipeline(
+        session,
+        req.message,
+        req.product_url,
+        req.history,
+        req.shown_suggestions,
+    ):
         if kind == "product":
             product = payload
         elif kind == "composed":
@@ -90,7 +96,13 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
         product = None
         composed = None
         try:
-            async for kind, payload in chat_service.pipeline(session, req.message, req.product_url):
+            async for kind, payload in chat_service.pipeline(
+                session,
+                req.message,
+                req.product_url,
+                req.history,
+                req.shown_suggestions,
+            ):
                 if kind == "status":
                     yield _sse("status", payload)
                 elif kind == "product":

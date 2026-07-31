@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from app.intelligence import factual_answerer as fa
-from app.intelligence.intent_router import classify
+from app.intelligence.intent_router import classify, classify_all
 from app.models import Money, ProductData, ProductImage, ProductReview, ReviewSummary, SellingPlan
 
 
@@ -190,6 +190,11 @@ def test_intent_routing():
     assert classify("What can I improve on this page?").intent == "page_evaluation"
     assert classify("Rewrite the description").intent == "content_rewrite"
     assert classify("Create an FAQ").intent == "faq_generation"
+
+
+def test_compound_intent_routing_keeps_every_requested_task():
+    intents = {result.intent for result in classify_all("Compare the price and reviews, and is it in stock?")}
+    assert intents == {"price_lookup", "review_lookup", "availability_lookup"}
 
 
 def test_ingredient_target_extraction():

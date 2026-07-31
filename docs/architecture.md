@@ -3,7 +3,8 @@
 Two services: a FastAPI backend (Python 3.12) that does the navigating, ingesting, evaluating and
 answering, and a Next.js frontend (App Router, TypeScript, Tailwind) that's the chat UI and streams
 the responses. State is deliberately ephemeral - in-memory sessions (60 min TTL) and a product cache
-(10 min TTL), no database or vector store.
+(10 min TTL), no database or vector store. The browser includes up to 10 recent completed dialogue
+turns with a request, allowing a saved thread to recover conversational context after server expiry.
 
 ```mermaid
 flowchart TD
@@ -20,7 +21,7 @@ flowchart TD
     INGEST --> SHOP[Shopify .js/.json probe]
     EMB & LD & HTML & IMG & REV & SHOP --> MERGE[Merger · precedence + evidence]
     MERGE --> PROD[Normalized ProductData]
-    PROD --> ROUTER[Intent router]
+    PROD --> ROUTER[Intent router + recent dialogue]
     ROUTER --> FACTS[Deterministic answerer]
     ROUTER --> RULES[Evaluation rules · scorecard]
     RULES --> LLM[LLM evaluator / writer · optional]
@@ -69,16 +70,26 @@ The LLM is optional and only handles the open-ended work - the evaluation narrat
 recommendations, summaries, general questions, and content generation. With no key set, evaluation
 and summary fall back to rule-based output and content generation just says it's unavailable.
 
+Simple factual questions stay on one deterministic route. Ambiguous follow-ups and compound
+questions receive recent user and assistant turns plus authoritative deterministic tool results.
+Aggregate review judgments that could otherwise overclaim quality or effectiveness use a grounded
+template, while generated copy is checked for unsupported review, dietary and health inferences.
+
 The LLM only ever sees a compact fact payload (`llm_payload.py`), never raw HTML, and the prompts
 (`prompts/`) tell it not to invent facts.
 
 ## What happens on one streamed request
 
-1. Validate the URL (from `product_url` or extracted from the message) and run the SSRF check.
+1. Restore recent browser history when the in-memory session is empty. Catalogue-discovery questions
+   can search Healf's live Storefront API immediately; product questions validate the URL (from the
+   visible browser context or the new message) and run the SSRF check. An explicitly named or linked
+   product always overrides older browser context.
 2. Fetch the live page, cache-first, re-checking the host on each redirect.
 3. Run all the parsers, merge into `ProductData`, cache it.
 4. Emit the `product` event so the UI can show the card.
-5. Route the intent to a deterministic answer and/or the LLM, then compose the response.
+5. Route simple intents deterministically; combine tool results and recent turns for ambiguous or
+   compound conversation, then compose the response.
 6. Stream the answer as `token` events, then a final `complete` with the full response.
 
-Follow-up messages leave out the URL and reuse whatever product the session is holding.
+The browser also sends the visible product URL with follow-ups, so context survives an expired
+in-memory session. The backend still gives a newly named or linked product priority over that URL.

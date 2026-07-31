@@ -2,7 +2,13 @@
 
 A natural-language agent for Healf product pages. Paste a product URL, ask a question in plain
 English, and get an answer grounded in the live page, with a source for every fact. Follow-up
-questions reuse the same product, so you never paste the URL twice.
+questions reuse the same product and recent conversation, so you never paste the URL twice. It can
+also answer compound requests such as "compare the price and reviews, then tell me which signal is
+more persuasive" without silently dropping part of the question. Requests for similar or other
+products search Healf's live Storefront catalog and return clickable alternatives instead of an
+ungrounded generic suggestion. A conversation can also start with a catalogue question such as
+"Do you have any protein bars?"; after choosing a result, the same chat continues with grounded
+product-page analysis.
 
 **Live demo:** https://healf-product-intelligence-agent.vercel.app
 **Walkthrough video:** https://www.loom.com/share/c2abfadb87cb49c6827e10884e086505
@@ -79,10 +85,18 @@ brief):
 - Rewrite the product description.
 - Write an FAQ for this product.
 
+**Discover related products** - searched in Healf's live catalog:
+
+- Do you have any protein bars? (works before selecting a product URL)
+- Can you suggest me other products?
+- Show me similar items.
+- Recommend some magnesium products instead.
+
 Every answer carries a source line linking to the live product page it was read from. Real
 captured responses to these prompts are in
 [examples/example_outputs.md](examples/example_outputs.md), so you can review output without running
-anything.
+anything. The capture includes 11 scenarios, including a compound request and a contextual
+follow-up that depends on the previous answer.
 
 ## How this meets the brief
 
@@ -99,7 +113,7 @@ anything.
 chat UI (Next.js)
   -> FastAPI: validate URL + SSRF check -> fetch the live page
   -> parsers -> merge into one ProductData (every field keeps its source)
-  -> route the question -> deterministic answer, or rules + LLM
+  -> route simple facts deterministically; use recent dialogue for ambiguous/compound questions
   -> stream back over SSE (status -> product -> tokens -> done)
 ```
 
@@ -123,6 +137,13 @@ those aren't the same claim.
 handful of live products into a benchmark (median description length, image count, alt-text coverage,
 and so on), so evaluation can say "add one more image to match comparable pages" instead of a generic
 tip. Without the benchmark file, evaluation stays product-specific and says so.
+
+**Conversational without giving up grounding.** The browser sends the last completed user and
+assistant turns with each request, so a reopened chat still understands references such as "why does
+that matter?" even if the backend session expired. Multi-part questions retain every detected task.
+Deterministic results for price, reviews, ingredients and availability are passed to the LLM as
+authoritative tool results. High-risk review judgments and generated claims also have deterministic
+output guardrails.
 
 More detail and diagrams are in [docs/architecture.md](docs/architecture.md) and
 [docs/DIAGRAMS.md](docs/DIAGRAMS.md).
@@ -159,6 +180,7 @@ Factual questions work with **no API key**. Evaluation and content generation ne
 
 Four endpoints: `GET /health`, `POST /api/products/fetch`, `POST /api/chat`, and
 `POST /api/chat/stream` (SSE: `status` -> `product` -> `token` -> `complete`).
+Chat requests may include up to 12 recent `{role, text}` history turns for browser-session recovery.
 
 ```bash
 curl -X POST localhost:8000/api/chat -H 'content-type: application/json' \
@@ -168,8 +190,8 @@ curl -X POST localhost:8000/api/chat -H 'content-type: application/json' \
 ## Tests
 
 ```bash
-cd backend && pytest -q       # 68 tests: URL/SSRF, parsers, merger, factual answers, evaluation, API
-cd frontend && npm test       # component tests
+cd backend && pytest -q       # 107 tests: URL/SSRF, parsers, merger, conversation, grounding, evaluation, API
+cd frontend && npm test       # 15 component/history tests
 ```
 
 Parser tests run against a saved real Healf page so they don't need the network; the API tests mock
@@ -215,7 +237,8 @@ The full version is in [docs/roadmap.md](docs/roadmap.md).
 - Vision runs on demand (when you ask about the images), not indexed for every product up front, and it reads panels rather than doing exhaustive OCR of every label.
 - Review count/rating comes from JSON-LD, and the agent can quote the written Yotpo review samples
   embedded in the current product page. It does not paginate through the complete review archive.
-- State is in-memory, so it resets on restart. Recent chats in the sidebar are stored in the browser.
+- Product/session state is in-memory, so it resets on restart. Recent chats are stored in the browser,
+  and the last completed turns are resent to restore conversational context when a thread is reopened.
 - Extraction depends on Healf's current markup, so a regression suite over saved pages is the first
   thing I'd add for production.
 

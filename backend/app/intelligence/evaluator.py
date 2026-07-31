@@ -187,8 +187,8 @@ def _sanitize_recommendations(
                 )
             rec.evidence_fields = _existing_fields(available_fields, "reviews")
             changed = True
-        elif _unsupported_claim_markers(p, combined):
-            if _contains_dietary_or_certification_marker(combined):
+        elif _unsupported_claim_markers(p, combined) or _unsupported_sensitive_category(p, combined):
+            if _contains_dietary_or_certification_marker(combined) or _DIETARY_RE.search(combined):
                 rec.title = "Verify allergen and dietary information"
                 rec.rationale = (
                     "The extracted page data does not verify every allergen, dietary, or "
@@ -228,6 +228,21 @@ def _sanitize_recommendations(
     for index, rec in enumerate(sanitized, start=1):
         rec.priority = index
     return sanitized, changed
+
+
+def _unsupported_sensitive_category(p: ProductData, generated_text: str) -> bool:
+    """Catch broad dietary/suitability advice even without a known marker.
+
+    For example, "zero sugar" must not become "suitable for specific dietary
+    needs" unless the source page itself explicitly provides suitability data.
+    """
+    if not _DIETARY_RE.search(generated_text):
+        return False
+    source = _grounding_corpus(p)
+    return not bool(
+        _DIETARY_RE.search(source)
+        or _contains_dietary_or_certification_marker(source)
+    )
 
 
 def _guardrail_topic(rec: Recommendation) -> str | None:

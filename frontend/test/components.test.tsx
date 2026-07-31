@@ -4,6 +4,12 @@ import { ProductCard } from "@/components/product/product-card";
 import { AgentProgress } from "@/components/chat/agent-progress";
 import { Scorecard } from "@/components/intelligence/scorecard";
 import { Message } from "@/components/chat/message";
+import {
+  conversationHistory,
+  latestThreadProduct,
+  productContextUrl,
+  shownSuggestions,
+} from "@/components/chat/model";
 import { Citations } from "@/components/intelligence/citations";
 import { findHealfUrl } from "@/lib/utils";
 import type { ProductData, ProductEvaluation } from "@/lib/types";
@@ -34,6 +40,49 @@ describe("URL extraction (composer logic)", () => {
   });
   it("returns null when a follow-up omits the URL", () => {
     expect(findHealfUrl("what can I improve?")).toBeNull();
+  });
+});
+
+describe("Conversation history", () => {
+  it("sends completed user and assistant turns while excluding errors and in-flight messages", () => {
+    const history = conversationHistory([
+      { id: "1", role: "user", text: "Tell me about this product" },
+      { id: "2", role: "assistant", text: "It has 516 reviews." },
+      { id: "3", role: "assistant", text: "", streaming: true },
+      { id: "4", role: "assistant", text: "", error: { code: "X", message: "failed" } },
+    ]);
+    expect(history).toEqual([
+      { role: "user", text: "Tell me about this product" },
+      { role: "assistant", text: "It has 516 reviews." },
+    ]);
+  });
+
+  it("sends the product visible in the browser with every follow-up", () => {
+    expect(productContextUrl(product, null)).toBe(product.source_url);
+    expect(productContextUrl(product, "https://healf.com/products/reopened")).toBe(
+      "https://healf.com/products/reopened",
+    );
+  });
+
+  it("repairs a stale saved header from the latest product response", () => {
+    const newerProduct = { ...product, handle: "oshun", title: "Electrolytes Concentrate Mini" };
+    expect(
+      latestThreadProduct([
+        { id: "1", role: "assistant", text: "Sodii", product },
+        { id: "2", role: "user", text: "Switch products" },
+        { id: "3", role: "assistant", text: "Oshun", product: newerProduct },
+      ]),
+    ).toEqual(newerProduct);
+  });
+
+  it("collects unique suggestions already displayed in a saved thread", () => {
+    expect(
+      shownSuggestions([
+        { id: "1", role: "assistant", text: "Answer", suggested: ["Check price", "Check reviews"] },
+        { id: "2", role: "assistant", text: "Next", suggested: ["Check reviews", "Check stock"] },
+        { id: "3", role: "assistant", text: "", streaming: true, suggested: ["Ignore me"] },
+      ]),
+    ).toEqual(["Check price", "Check reviews", "Check stock"]);
   });
 });
 
@@ -88,6 +137,29 @@ describe("Citations", () => {
     expect(screen.queryByText("JSON-LD")).toBeNull();
     expect(screen.queryByText(/ingredients_raw/)).toBeNull();
   });
+
+  it("labels catalog recommendations without pretending they came from one product page", () => {
+    render(
+      <Citations
+        evidence={[
+          {
+            field: "product_recommendation",
+            source_type: "derived",
+            source_url: "https://healf.com/products/a",
+            confidence: 0.9,
+          },
+          {
+            field: "product_recommendation",
+            source_type: "derived",
+            source_url: "https://healf.com/products/b",
+            confidence: 0.9,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText(/2 live Healf catalog matches linked above/)).toBeInTheDocument();
+    expect(screen.queryByText(/the live Healf product page/)).toBeNull();
+  });
 });
 
 describe("Message", () => {
@@ -140,5 +212,16 @@ describe("Message", () => {
     expect(screen.getByText(/Written review text is unavailable/)).toBeInTheDocument();
     expect(screen.getByText("Note:")).toBeInTheDocument();
     expect(container.querySelector(".border-line.bg-card.shadow-soft")).toBeNull();
+  });
+
+  it("hides stale follow-up chips on older messages", () => {
+    render(
+      <Message
+        m={{ id: "old", role: "assistant", text: "Earlier answer", suggested: ["Old follow-up"] }}
+        onFollowUp={() => {}}
+        showSuggestions={false}
+      />,
+    );
+    expect(screen.queryByText("Old follow-up")).toBeNull();
   });
 });

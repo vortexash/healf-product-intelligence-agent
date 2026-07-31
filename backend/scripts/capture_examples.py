@@ -32,6 +32,21 @@ def main():
         ("Scenario 7 - Open-ended page evaluation", "What can I improve on this page?", "session"),
         ("Scenario 8 - Vision: read the product images", "What do the product images show?", "session"),
         ("Scenario 9 - Follow-up: rewrite the top section", "Rewrite the product description.", "session"),
+        (
+            "Scenario 10 - Compound conversational request",
+            "Compare the price and reviews, and tell me which is more persuasive.",
+            "session",
+        ),
+        (
+            "Scenario 11 - Contextual follow-up",
+            "Why do the reviews matter more here, and what should I be cautious about?",
+            "session",
+        ),
+        (
+            "Scenario 12 - Catalogue discovery without a product URL",
+            "Do you have any protein bars?",
+            None,
+        ),
     ]
 
     out = ["# Example Outputs - Healf Product Intelligence Agent", ""]
@@ -59,9 +74,9 @@ def main():
             continue
         session_id = resp.get("session_id", session_id)
         out.append(f"## {title}")
-        out.append(f"\n**User:** `{message.replace(chr(10), ' ⏎ ')}`\n")
+        out.append(f"\n**User:** `{message.replace(chr(10), ' [new line] ')}`\n")
         ans = resp["answer"]
-        out.append(f"**Intent:** `{ans['intent']}` · **Confidence:** `{ans['confidence']}`\n")
+        out.append(f"**Intent:** `{ans['intent']}` | **Confidence:** `{ans['confidence']}`\n")
         out.append("**Answer:**\n")
         out.append("> " + ans["text"].replace("\n", "\n> "))
         out.append("")
@@ -90,14 +105,16 @@ def main():
             out.append(f"**Evidence ({len(resp['evidence'])} fields):**\n")
             for e in resp["evidence"][:5]:
                 ex = (e.get("excerpt") or "").replace("\n", " ")[:120]
-                out.append(f"- `{e['field']}` ← {e['source_type']} (conf {e['confidence']}) {('“'+ex+'”') if ex else ''}")
+                out.append(f"- `{e['field']}` <- {e['source_type']} (conf {e['confidence']}) {('"'+ex+'"') if ex else ''}")
             out.append("")
         out.append("**Suggested follow-ups:** " + ", ".join(resp.get("suggested_actions", [])))
         out.append("\n---\n")
 
     dest = sys.argv[1] if len(sys.argv) > 1 else "../examples/example_outputs.md"
+    rendered = "\n".join(out)
+    rendered = "\n".join(line.rstrip() for line in rendered.splitlines()) + "\n"
     with open(dest, "w", encoding="utf-8") as f:
-        f.write("\n".join(out))
+        f.write(rendered)
     print("wrote", dest)
 
 
